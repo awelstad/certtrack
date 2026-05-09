@@ -1,0 +1,165 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { signOut } from '@/app/actions/auth'
+import { cn } from '@/lib/utils'
+import type { Role } from '@/lib/types'
+import {
+  LayoutDashboard,
+  Users,
+  Award,
+  Briefcase,
+  BookOpen,
+  AlertTriangle,
+  Wrench,
+  BarChart2,
+  Settings,
+  LogOut,
+  HardHat,
+  ChevronRight,
+} from 'lucide-react'
+
+type NavItem = {
+  href: string
+  label: string
+  icon: React.ElementType
+  adminOnly?: boolean
+}
+
+const navItems: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/workers', label: 'Workers', icon: Users },
+  { href: '/certifications', label: 'Certifications', icon: Award },
+  { href: '/jobs', label: 'Jobs', icon: Briefcase },
+  { href: '/orientations', label: 'Orientations', icon: BookOpen },
+  { href: '/jha', label: 'JHA', icon: AlertTriangle },
+  { href: '/equipment', label: 'Equipment', icon: Wrench },
+  { href: '/reports', label: 'Reports', icon: BarChart2 },
+]
+
+const adminItems: NavItem[] = [
+  { href: '/admin/branding', label: 'Branding', icon: Settings, adminOnly: true },
+]
+
+const adminRoles: Role[] = ['owner', 'admin']
+
+type Props = {
+  profile: {
+    full_name: string
+    role: Role
+    avatar_url: string | null
+  }
+}
+
+export function Sidebar({ profile }: Props) {
+  const pathname = usePathname()
+  const isAdmin = adminRoles.includes(profile.role)
+
+  function isActive(href: string) {
+    if (href === '/dashboard') return pathname === '/dashboard'
+    return pathname.startsWith(href)
+  }
+
+  return (
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-slate-900 lg:flex">
+      {/* Logo */}
+      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800 px-5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500">
+          <HardHat className="h-5 w-5 text-white" />
+        </div>
+        <span className="text-base font-bold text-white tracking-tight">CertTrack</span>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-4">
+        <ul className="space-y-0.5">
+          {navItems.map((item) => {
+            const active = isActive(item.href)
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    active
+                      ? 'bg-orange-500 text-white'
+                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  )}
+                >
+                  <item.icon
+                    className={cn(
+                      'h-4 w-4 shrink-0',
+                      active ? 'text-white' : 'text-slate-500 group-hover:text-white'
+                    )}
+                  />
+                  {item.label}
+                  {active && <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />}
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+
+        {/* Admin section */}
+        {isAdmin && (
+          <div className="mt-6">
+            <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
+              Admin
+            </p>
+            <ul className="space-y-0.5">
+              {adminItems.map((item) => {
+                const active = isActive(item.href)
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                        active
+                          ? 'bg-orange-500 text-white'
+                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          'h-4 w-4 shrink-0',
+                          active ? 'text-white' : 'text-slate-500 group-hover:text-white'
+                        )}
+                      />
+                      {item.label}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+      </nav>
+
+      {/* User + Sign Out */}
+      <div className="shrink-0 border-t border-slate-800 p-3">
+        <div className="mb-2 flex items-center gap-3 rounded-lg px-3 py-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-700 text-sm font-semibold text-white">
+            {profile.full_name.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-white">{profile.full_name}</p>
+            <p className="truncate text-xs text-slate-400 capitalize">
+              {profile.role.replace('_', ' ')}
+            </p>
+          </div>
+        </div>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
+        </form>
+      </div>
+    </aside>
+  )
+}
