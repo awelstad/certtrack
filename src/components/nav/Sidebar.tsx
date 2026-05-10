@@ -22,6 +22,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { JobFilterSelect } from './JobFilterSelect'
+import { OrgSwitcher } from './OrgSwitcher'
 import { ClearworkMark } from '@/components/ui/ClearworkMark'
 
 type NavItem = {
@@ -60,9 +61,11 @@ type Props = {
   jobs: { id: string; name: string }[]
   selectedJobId: string | null
   org: { name: string; logo_url: string | null }
+  allOrgs?: { id: string; name: string }[]
+  activeOrgId?: string | null
 }
 
-export function Sidebar({ profile, jobs, selectedJobId, org }: Props) {
+export function Sidebar({ profile, jobs, selectedJobId, org, allOrgs, activeOrgId }: Props) {
   const pathname = usePathname()
   const isAdmin = adminRoles.includes(profile.role)
 
@@ -95,6 +98,15 @@ export function Sidebar({ profile, jobs, selectedJobId, org }: Props) {
         )}
         <span className="truncate text-sm font-medium text-slate-300">{org.name}</span>
       </div>
+
+      {/* Platform admin org switcher */}
+      {profile.is_platform_admin && allOrgs && allOrgs.length > 0 && (
+        <OrgSwitcher
+          orgs={allOrgs}
+          activeOrgId={activeOrgId ?? null}
+          activeOrgName={org.name}
+        />
+      )}
 
       {/* Job filter */}
       {jobs.length > 0 && (

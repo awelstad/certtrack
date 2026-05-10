@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -19,11 +20,26 @@ export default async function EquipmentPage() {
 
   const isManager = MANAGER_ROLES.includes(profile!.role as Role)
 
-  const { data: equipment } = await supabase
+  const cookieStore = await cookies()
+  const selectedJobId = cookieStore.get('selected_job_id')?.value ?? null
+
+  let selectedJobName: string | null = null
+  if (selectedJobId) {
+    const { data: jobRow } = await supabase.from('jobs').select('name').eq('id', selectedJobId).single()
+    selectedJobName = jobRow?.name ?? null
+  }
+
+  let equipmentQuery = supabase
     .from('equipment')
     .select('id, name, make, model, status, last_inspection_at, equipment_types(name), jobs(name)')
     .eq('organization_id', profile!.organization_id)
     .order('created_at', { ascending: false })
+
+  if (selectedJobId) {
+    equipmentQuery = equipmentQuery.eq('job_id', selectedJobId)
+  }
+
+  const { data: equipment } = await equipmentQuery
 
   const ooCount = (equipment ?? []).filter((e) => e.status === 'out_of_service').length
 
@@ -31,7 +47,7 @@ export default async function EquipmentPage() {
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <PageHeader
         title="Equipment"
-        description="Track equipment, inspections, and job assignments."
+        description={selectedJobName ? `Showing equipment on ${selectedJobName}.` : 'Track equipment, inspections, and job assignments.'}
         action={
           <div className="flex items-center gap-2">
             {isManager && (
@@ -71,8 +87,8 @@ export default async function EquipmentPage() {
       {!equipment?.length ? (
         <EmptyState
           icon={Wrench}
-          title="No equipment yet"
-          description="Add equipment to track inspections, assign to job sites, and generate QR codes."
+          title={selectedJobName ? `No equipment on ${selectedJobName}` : 'No equipment yet'}
+          description={selectedJobName ? 'No equipment is currently assigned to this job.' : 'Add equipment to track inspections, assign to job sites, and generate QR codes.'}
           action={
             <Link
               href="/equipment/new"

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -14,11 +15,27 @@ export default async function OrientationsPage() {
     .eq('id', user!.id)
     .single()
 
-  const { data: orientations } = await supabase
+  const cookieStore = await cookies()
+  const selectedJobId = cookieStore.get('selected_job_id')?.value ?? null
+
+  let selectedJobName: string | null = null
+  if (selectedJobId) {
+    const { data: jobRow } = await supabase.from('jobs').select('name').eq('id', selectedJobId).single()
+    selectedJobName = jobRow?.name ?? null
+  }
+
+  let orientationQuery = supabase
     .from('orientation_modules')
     .select('id, title, is_required, include_in_compliance, job_id, jobs(name)')
     .eq('organization_id', profile!.organization_id)
     .order('created_at', { ascending: false })
+
+  if (selectedJobId) {
+    // Show this job's orientations + general (no job) orientations
+    orientationQuery = orientationQuery.or(`job_id.eq.${selectedJobId},job_id.is.null`)
+  }
+
+  const { data: orientations } = await orientationQuery
 
   // Fetch sign-off counts in one query
   const orientationIds = (orientations ?? []).map((o) => o.id)
@@ -40,7 +57,7 @@ export default async function OrientationsPage() {
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <PageHeader
         title="Orientations"
-        description="Site orientation documents for workers to review and acknowledge."
+        description={selectedJobName ? `Showing orientations for ${selectedJobName} and general orientations.` : 'Site orientation documents for workers to review and acknowledge.'}
         action={
           isManager ? (
             <Link

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -15,24 +16,77 @@ export default async function CertificationTypesPage() {
     .single()
   const orgId = profile!.organization_id
 
+  const cookieStore = await cookies()
+  const selectedJobId = cookieStore.get('selected_job_id')?.value ?? null
+
+  let selectedJobName: string | null = null
+  let scopedWorkerIds: string[] | null = null
+
+  if (selectedJobId) {
+    const [{ data: jobRow }, { data: jobWorkers }] = await Promise.all([
+      supabase.from('jobs').select('name').eq('id', selectedJobId).single(),
+      supabase.from('job_workers').select('worker_id').eq('job_id', selectedJobId),
+    ])
+    selectedJobName = jobRow?.name ?? null
+    scopedWorkerIds = (jobWorkers ?? []).map((jw) => jw.worker_id)
+  }
+
   const today = new Date().toISOString().split('T')[0]
   const in30 = new Date(Date.now() + 30 * 864e5).toISOString().split('T')[0]
 
-  const [typesRes, pendingRes, expiringRes] = await Promise.all([
-    supabase.from('certification_types').select('*').eq('organization_id', orgId).order('name'),
-    supabase.from('worker_certifications').select('id', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'pending'),
-    supabase.from('worker_certifications').select('id', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'approved').gte('expiry_date', today).lte('expiry_date', in30),
-  ])
+  // Cert type list is always org-wide (types aren't per-job)
+  const typesRes = await supabase
+    .from('certification_types')
+    .select('*')
+    .eq('organization_id', orgId)
+    .order('name')
+
+  // Counts scoped to job workers when a job is selected
+  let pendingQuery = supabase
+    .from('worker_certifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', orgId)
+    .eq('status', 'pending')
+
+  let expiringQuery = supabase
+    .from('worker_certifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', orgId)
+    .eq('status', 'approved')
+    .gte('expiry_date', today)
+    .lte('expiry_date', in30)
+
+  if (scopedWorkerIds !== null) {
+    if (scopedWorkerIds.length === 0) {
+      // Job has no workers — force zero counts
+      const types = typesRes.data ?? []
+      return renderPage({ types, pendingCount: 0, expiringCount: 0, selectedJobName })
+    }
+    pendingQuery  = pendingQuery.in('worker_id', scopedWorkerIds)
+    expiringQuery = expiringQuery.in('worker_id', scopedWorkerIds)
+  }
+
+  const [pendingRes, expiringRes] = await Promise.all([pendingQuery, expiringQuery])
 
   const types = typesRes.data ?? []
   const pendingCount = pendingRes.count ?? 0
   const expiringCount = expiringRes.count ?? 0
 
+  return renderPage({ types, pendingCount, expiringCount, selectedJobName })
+}
+
+function renderPage({ types, pendingCount, expiringCount, selectedJobName }: {
+  types: { id: string; name: string; validity_days: number | null; requires_document: boolean; description: string | null }[]
+  pendingCount: number
+  expiringCount: number
+  selectedJobName: string | null
+}) {
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <PageHeader
         title="Certifications"
-        description="Define certification types and monitor compliance across your workforce."
+        description={selectedJobName ? `Showing cert stats for workers on ${selectedJobName}.` : 'Define certification types and monitor compliance across your workforce.'}
         action={
           <button className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600">
             <Plus className="h-4 w-4" />

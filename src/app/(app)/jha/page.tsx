@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -14,11 +15,26 @@ export default async function JhaPage() {
     .eq('id', user!.id)
     .single()
 
-  const { data: jhas } = await supabase
+  const cookieStore = await cookies()
+  const selectedJobId = cookieStore.get('selected_job_id')?.value ?? null
+
+  let selectedJobName: string | null = null
+  if (selectedJobId) {
+    const { data: jobRow } = await supabase.from('jobs').select('name').eq('id', selectedJobId).single()
+    selectedJobName = jobRow?.name ?? null
+  }
+
+  let jhaQuery = supabase
     .from('jhas')
     .select('id, title, status, work_date, jobs(name)')
     .eq('organization_id', profile!.organization_id)
     .order('created_at', { ascending: false })
+
+  if (selectedJobId) {
+    jhaQuery = jhaQuery.eq('job_id', selectedJobId)
+  }
+
+  const { data: jhas } = await jhaQuery
 
   const isManager = ['owner', 'admin', 'pm', 'superintendent'].includes(profile?.role ?? '')
 
@@ -26,7 +42,7 @@ export default async function JhaPage() {
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <PageHeader
         title="JHA"
-        description="Create, review, and sign Job Hazard Analyses."
+        description={selectedJobName ? `Showing JHAs for ${selectedJobName}.` : 'Create, review, and sign Job Hazard Analyses.'}
         action={
           isManager ? (
             <div className="flex gap-2">
@@ -52,8 +68,8 @@ export default async function JhaPage() {
       {!jhas?.length ? (
         <EmptyState
           icon={ClipboardList}
-          title="No JHAs yet"
-          description="Create a Job Hazard Analysis to document hazards, controls, and worker sign-offs."
+          title={selectedJobName ? `No JHAs for ${selectedJobName}` : 'No JHAs yet'}
+          description={selectedJobName ? 'No JHAs have been created for this job.' : 'Create a Job Hazard Analysis to document hazards, controls, and worker sign-offs.'}
           action={
             isManager ? (
               <Link

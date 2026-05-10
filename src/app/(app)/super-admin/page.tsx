@@ -104,7 +104,7 @@ export default async function SuperAdminPage() {
                 </td>
                 <td className="px-4 py-3">
                   <Link
-                    href={`/super-admin/orgs/new?clone=${org.id}`}
+                    href={`/super-admin/orgs/${org.id}`}
                     className="inline-flex items-center gap-1 text-xs text-orange-600 hover:underline"
                   >
                     <ExternalLink className="h-3 w-3" /> Details

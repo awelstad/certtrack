@@ -4,6 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+async function getCallerUserId() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.id ?? null
+}
+
 async function getPlatformAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -100,4 +106,109 @@ export async function deleteOrganization(orgId: string): Promise<{ error?: strin
 
   revalidatePath('/super-admin')
   return {}
+}
+
+export async function switchToOrg(orgId: string): Promise<{ error?: string }> {
+  const auth = await getPlatformAdmin()
+  if ('error' in auth) return { error: auth.error }
+
+  const userId = await getCallerUserId()
+  if (!userId) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('profiles')
+    .update({ platform_active_org_id: orgId })
+    .eq('id', userId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/', 'layout')
+  return {}
+}
+
+export async function exitOrgSwitch(): Promise<{ error?: string }> {
+  const auth = await getPlatformAdmin()
+  if ('error' in auth) return { error: auth.error }
+
+  const userId = await getCallerUserId()
+  if (!userId) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('profiles')
+    .update({ platform_active_org_id: null })
+    .eq('id', userId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/', 'layout')
+  return {}
+}
+
+export async function inviteUserToOrg(
+  _prev: { error?: string; success?: boolean } | null,
+  formData: FormData
+): Promise<{ error?: string; success?: boolean }> {
+  const auth = await getPlatformAdmin()
+  if ('error' in auth) return { error: auth.error }
+
+  const admin = createAdminClient()
+
+  const orgId    = (formData.get('org_id') as string)?.trim()
+  const fullName = (formData.get('full_name') as string)?.trim()
+  const email    = (formData.get('email') as string)?.trim()
+  const role     = (formData.get('role') as string)?.trim()
+  const password = (formData.get('password') as string)?.trim()
+
+  if (!orgId || !email || !role || !password) return { error: 'All fields are required' }
+
+  const { data: authData, error: authErr } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  })
+
+  if (authErr) return { error: authErr.message }
+
+  const { error: profileErr } = await admin.from('profiles').insert({
+    id:              authData.user.id,
+    organization_id: orgId,
+    role,
+    full_name:       fullName || email.split('@')[0],
+  })
+
+  if (profileErr) {
+    await admin.auth.admin.deleteUser(authData.user.id)
+    return { error: profileErr.message }
+  }
+
+  revalidatePath(`/super-admin/orgs/${orgId}`)
+  return { success: true }
+}
+
+export async function updateOrgName(
+  _prev: { error?: string; success?: boolean } | null,
+  formData: FormData
+): Promise<{ error?: string; success?: boolean }> {
+  const auth = await getPlatformAdmin()
+  if ('error' in auth) return { error: auth.error }
+
+  const admin = createAdminClient()
+
+  const orgId = (formData.get('org_id') as string)?.trim()
+  const name  = (formData.get('name') as string)?.trim()
+
+  if (!orgId || !name) return { error: 'Name is required' }
+
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+  const { error } = await admin
+    .from('organizations')
+    .update({ name, slug })
+    .eq('id', orgId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/super-admin/orgs/${orgId}`)
+  revalidatePath('/super-admin')
+  return { success: true }
 }
