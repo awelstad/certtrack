@@ -18,6 +18,8 @@ import {
   LogOut,
   HardHat,
   ChevronRight,
+  HelpCircle,
+  Building2,
 } from 'lucide-react'
 
 type NavItem = {
@@ -36,6 +38,7 @@ const navItems: NavItem[] = [
   { href: '/jha', label: 'JHA', icon: AlertTriangle },
   { href: '/equipment', label: 'Equipment', icon: Wrench },
   { href: '/reports', label: 'Reports', icon: BarChart2 },
+  { href: '/help', label: 'Help & Guide', icon: HelpCircle },
 ]
 
 const adminItems: NavItem[] = [
@@ -49,6 +52,7 @@ type Props = {
     full_name: string
     role: Role
     avatar_url: string | null
+    is_platform_admin: boolean
   }
 }
 
@@ -127,6 +131,36 @@ export function Sidebar({ profile }: Props) {
                           active ? 'text-white' : 'text-slate-500 group-hover:text-white'
                         )}
                       />
+                      {item.label}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+
+        {/* Platform super-admin section */}
+        {profile.is_platform_admin && (
+          <div className="mt-6">
+            <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
+              Platform
+            </p>
+            <ul className="space-y-0.5">
+              {[{ href: '/super-admin', label: 'Organizations', icon: Building2 }].map((item) => {
+                const active = isActive(item.href)
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                        active
+                          ? 'bg-orange-500 text-white'
+                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      )}
+                    >
+                      <item.icon className={cn('h-4 w-4 shrink-0', active ? 'text-white' : 'text-slate-500 group-hover:text-white')} />
                       {item.label}
                     </Link>
                   </li>

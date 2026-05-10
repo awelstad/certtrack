@@ -4,7 +4,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { WorkerCard } from '@/components/workers/WorkerCard'
 import { createClient } from '@/lib/supabase/server'
 import { calculateWorkerOverallStatus } from '@/lib/certifications'
-import { Users, Plus } from 'lucide-react'
+import { Users, Plus, Printer } from 'lucide-react'
 import type { WorkerStatus, CertStatus } from '@/lib/types'
 
 export default async function WorkersPage() {
@@ -45,13 +45,22 @@ export default async function WorkersPage() {
         title="Workers"
         description="Manage field workers and their certifications."
         action={
-          <Link
-            href="/workers/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
-          >
-            <Plus className="h-4 w-4" />
-            Add Worker
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/workers/badges"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              <Printer className="h-4 w-4" />
+              Print Badges
+            </Link>
+            <Link
+              href="/workers/new"
+              className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
+            >
+              <Plus className="h-4 w-4" />
+              Add Worker
+            </Link>
+          </div>
         }
       />
 

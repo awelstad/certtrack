@@ -796,25 +796,12 @@ CREATE POLICY "jha_signatures: admin can delete"
 
 
 -- ============================================================
--- EQUIPMENT TYPES
+-- EQUIPMENT TYPES (global lookup table — no org scope)
 -- ============================================================
 
-CREATE POLICY "equipment_types: org members can select"
+CREATE POLICY "equipment_types: authenticated can select"
   ON equipment_types FOR SELECT TO authenticated
-  USING (organization_id = get_my_org_id());
-
-CREATE POLICY "equipment_types: managers can insert"
-  ON equipment_types FOR INSERT TO authenticated
-  WITH CHECK (organization_id = get_my_org_id() AND is_manager());
-
-CREATE POLICY "equipment_types: managers can update"
-  ON equipment_types FOR UPDATE TO authenticated
-  USING    (organization_id = get_my_org_id() AND is_manager())
-  WITH CHECK (organization_id = get_my_org_id() AND is_manager());
-
-CREATE POLICY "equipment_types: admin can delete"
-  ON equipment_types FOR DELETE TO authenticated
-  USING (organization_id = get_my_org_id() AND is_admin());
+  USING (true);
 
 
 -- ============================================================

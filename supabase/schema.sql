@@ -360,10 +360,10 @@ CREATE TABLE jha_signatures (
 -- ============================================================
 
 CREATE TABLE equipment_types (
-  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id uuid        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  name            text        NOT NULL,
-  created_at      timestamptz NOT NULL DEFAULT now()
+  id                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name                     text NOT NULL,
+  category                 text,
+  inspection_interval_days int
 );
 
 CREATE TABLE equipment (
@@ -389,10 +389,11 @@ ALTER TABLE qr_scan_logs
 
 CREATE TABLE equipment_inspection_templates (
   id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id   uuid        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id   uuid        REFERENCES organizations(id) ON DELETE CASCADE,
   equipment_type_id uuid        REFERENCES equipment_types(id) ON DELETE SET NULL,
-  name              text        NOT NULL,
+  title             text        NOT NULL,
   description       text,
+  checklist_items   jsonb       NOT NULL DEFAULT '[]',
   created_by        uuid        REFERENCES profiles(id) ON DELETE SET NULL,
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now()
@@ -513,7 +514,7 @@ CREATE INDEX idx_jha_signatures_jha_id                 ON jha_signatures(jha_id)
 CREATE INDEX idx_jha_signatures_worker_id              ON jha_signatures(worker_id);
 
 -- Equipment
-CREATE INDEX idx_equipment_types_organization_id       ON equipment_types(organization_id);
+CREATE INDEX idx_equipment_types_category              ON equipment_types(category);
 CREATE INDEX idx_equipment_organization_id             ON equipment(organization_id);
 CREATE INDEX idx_equipment_public_id                   ON equipment(public_id);
 CREATE INDEX idx_equipment_job_id                      ON equipment(job_id);

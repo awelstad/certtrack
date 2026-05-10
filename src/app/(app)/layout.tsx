@@ -13,16 +13,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, role, avatar_url, organization_id')
+    .select('full_name, role, avatar_url, organization_id, is_platform_admin')
     .eq('id', user.id)
     .single()
 
   if (!profile) redirect('/login')
 
   const safeProfile = {
-    full_name: profile.full_name as string,
-    role: profile.role as Role,
-    avatar_url: profile.avatar_url as string | null,
+    full_name:         profile.full_name as string,
+    role:              profile.role as Role,
+    avatar_url:        profile.avatar_url as string | null,
+    is_platform_admin: (profile.is_platform_admin as boolean) ?? false,
   }
 
   return (
