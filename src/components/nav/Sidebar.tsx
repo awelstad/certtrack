@@ -16,12 +16,12 @@ import {
   BarChart2,
   Settings,
   LogOut,
-  HardHat,
   ChevronRight,
   HelpCircle,
   Building2,
 } from 'lucide-react'
 import { JobFilterSelect } from './JobFilterSelect'
+import { ClearworkMark } from '@/components/ui/ClearworkMark'
 
 type NavItem = {
   href: string
@@ -57,9 +57,10 @@ type Props = {
   }
   jobs: { id: string; name: string }[]
   selectedJobId: string | null
+  org: { name: string; logo_url: string | null }
 }
 
-export function Sidebar({ profile, jobs, selectedJobId }: Props) {
+export function Sidebar({ profile, jobs, selectedJobId, org }: Props) {
   const pathname = usePathname()
   const isAdmin = adminRoles.includes(profile.role)
 
@@ -70,12 +71,27 @@ export function Sidebar({ profile, jobs, selectedJobId }: Props) {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-slate-900 lg:flex">
-      {/* Logo */}
-      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800 px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500">
-          <HardHat className="h-5 w-5 text-white" />
-        </div>
+      {/* Clearwork brand */}
+      <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-slate-800 px-4">
+        <ClearworkMark size={28} />
         <span className="text-base font-bold text-white tracking-tight">Clearwork</span>
+      </div>
+
+      {/* Org branding */}
+      <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-3">
+        {org.logo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={org.logo_url}
+            alt={org.name}
+            className="h-7 w-7 shrink-0 rounded object-contain bg-white p-0.5"
+          />
+        ) : (
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-slate-700 text-xs font-bold text-white">
+            {org.name.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <span className="truncate text-sm font-medium text-slate-300">{org.name}</span>
       </div>
 
       {/* Job filter */}

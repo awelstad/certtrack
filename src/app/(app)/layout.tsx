@@ -20,13 +20,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!profile) redirect('/login')
 
-  const [{ data: jobs }, cookieStore] = await Promise.all([
+  const [{ data: jobs }, { data: org }, cookieStore] = await Promise.all([
     supabase
       .from('jobs')
       .select('id, name')
       .eq('organization_id', profile.organization_id)
       .eq('status', 'active')
       .order('name'),
+    supabase
+      .from('organizations')
+      .select('name, logo_url')
+      .eq('id', profile.organization_id)
+      .single(),
     cookies(),
   ])
 
@@ -40,11 +45,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const jobList = (jobs ?? []) as { id: string; name: string }[]
+  const orgBranding = { name: org?.name ?? '', logo_url: org?.logo_url ?? null }
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Sidebar profile={safeProfile} jobs={jobList} selectedJobId={selectedJobId} />
-      <TopBar profile={safeProfile} jobs={jobList} selectedJobId={selectedJobId} />
+      <Sidebar profile={safeProfile} jobs={jobList} selectedJobId={selectedJobId} org={orgBranding} />
+      <TopBar profile={safeProfile} jobs={jobList} selectedJobId={selectedJobId} org={orgBranding} />
       <div className="lg:pl-64">
         <main className="min-h-screen pb-20 lg:pb-0">
           {children}

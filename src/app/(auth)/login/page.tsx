@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react'
 import { signIn } from '@/app/actions/auth'
-import { HardHat } from 'lucide-react'
+import { ClearworkMark } from '@/components/ui/ClearworkMark'
 
 export default function LoginPage() {
   const [state, action, pending] = useActionState(signIn, null)
@@ -11,9 +11,7 @@ export default function LoginPage() {
     <div className="w-full max-w-sm">
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center gap-3">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500">
-          <HardHat className="h-8 w-8 text-white" />
-        </div>
+        <ClearworkMark size={56} className="rounded-2xl" />
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white">Clearwork</h1>
           <p className="mt-1 text-sm text-slate-400">Construction Compliance</p>
