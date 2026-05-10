@@ -134,19 +134,19 @@ BEGIN
 
   -- ── Equipment Inspections ──────────────────────────────────
 
-  INSERT INTO equipment_inspections (organization_id, equipment_id, inspector_name, inspection_date, status, notes) VALUES
-    (v_org, v_eq1, 'Mike Rodriguez',  '2026-04-01', 'pass',  'Battery charged, controls responsive, E-stop tested.'),
-    (v_org, v_eq1, 'Mike Rodriguez',  '2026-01-10', 'pass',  'Pre-use check passed. Platform guardrails intact.'),
-    (v_org, v_eq2, 'Jake Torres',     '2026-03-15', 'pass',  'Hydraulics and emergency lowering system verified.'),
-    (v_org, v_eq2, 'Jake Torres',     '2025-12-18', 'fail',  'Hydraulic leak at boom cylinder. Unit tagged out for repair.'),
-    (v_org, v_eq3, 'Alex Welstad',    '2026-04-20', 'pass',  'Forks, mast, horn, and overhead guard all functional.'),
-    (v_org, v_eq4, 'Mike Rodriguez',  '2026-03-01', 'pass',  'Oil level, coolant, fuel, and output voltage verified.'),
-    (v_org, v_eq5, 'Jake Torres',     '2026-04-05', 'pass',  'Lights output checked, mast extends fully, leveling outriggers good.'),
-    (v_org, v_eq6, 'Alex Welstad',    '2026-02-10', 'pass',  'Rungs, feet, and locking mechanism intact. No cracks or bends.'),
-    (v_org, v_eq7, 'Mike Rodriguez',  '2026-01-15', 'pass',  'Straps, buckles, and D-rings inspected. No wear or damage.'),
-    (v_org, v_eq8, 'Jake Torres',     '2026-04-10', 'pass',  'All GFCI outlets tested with plug-in tester. Tripping correctly.'),
-    (v_org, v_eq9, 'Alex Welstad',    '2026-01-01', 'pass',  'Pressure in green zone. Pull pin, seal, and label intact.'),
-    (v_org, v_eq10, 'Mike Rodriguez', '2026-03-20', 'pass',  'Fluids, tires, lights, first aid kit, and fire extinguisher checked.');
+  INSERT INTO equipment_inspections (organization_id, equipment_id, inspector_name, inspected_at, inspection_date, status, notes) VALUES
+    (v_org, v_eq1,  'Mike Rodriguez',  '2026-04-01 08:00+00', '2026-04-01', 'pass',  'Battery charged, controls responsive, E-stop tested.'),
+    (v_org, v_eq1,  'Mike Rodriguez',  '2026-01-10 08:00+00', '2026-01-10', 'pass',  'Pre-use check passed. Platform guardrails intact.'),
+    (v_org, v_eq2,  'Jake Torres',     '2026-03-15 08:00+00', '2026-03-15', 'pass',  'Hydraulics and emergency lowering system verified.'),
+    (v_org, v_eq2,  'Jake Torres',     '2025-12-18 08:00+00', '2025-12-18', 'fail',  'Hydraulic leak at boom cylinder. Unit tagged out for repair.'),
+    (v_org, v_eq3,  'Alex Welstad',    '2026-04-20 08:00+00', '2026-04-20', 'pass',  'Forks, mast, horn, and overhead guard all functional.'),
+    (v_org, v_eq4,  'Mike Rodriguez',  '2026-03-01 08:00+00', '2026-03-01', 'pass',  'Oil level, coolant, fuel, and output voltage verified.'),
+    (v_org, v_eq5,  'Jake Torres',     '2026-04-05 08:00+00', '2026-04-05', 'pass',  'Lights output checked, mast extends fully, leveling outriggers good.'),
+    (v_org, v_eq6,  'Alex Welstad',    '2026-02-10 08:00+00', '2026-02-10', 'pass',  'Rungs, feet, and locking mechanism intact. No cracks or bends.'),
+    (v_org, v_eq7,  'Mike Rodriguez',  '2026-01-15 08:00+00', '2026-01-15', 'pass',  'Straps, buckles, and D-rings inspected. No wear or damage.'),
+    (v_org, v_eq8,  'Jake Torres',     '2026-04-10 08:00+00', '2026-04-10', 'pass',  'All GFCI outlets tested with plug-in tester. Tripping correctly.'),
+    (v_org, v_eq9,  'Alex Welstad',    '2026-01-01 08:00+00', '2026-01-01', 'pass',  'Pressure in green zone. Pull pin, seal, and label intact.'),
+    (v_org, v_eq10, 'Mike Rodriguez',  '2026-03-20 08:00+00', '2026-03-20', 'pass',  'Fluids, tires, lights, first aid kit, and fire extinguisher checked.');
 
   -- ── Toolbox Talks ─────────────────────────────────────────
 
