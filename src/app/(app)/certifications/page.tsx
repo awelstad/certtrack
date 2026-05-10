@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Badge } from '@/components/ui/Badge'
-import { Award, Plus, AlertTriangle, Clock } from 'lucide-react'
+import { Award, Plus, AlertTriangle, Clock, CalendarDays } from 'lucide-react'
 
 export default async function CertificationTypesPage() {
   const supabase = await createClient()
@@ -42,7 +42,7 @@ export default async function CertificationTypesPage() {
       />
 
       {/* Quick links */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Link
           href="/certifications/pending"
           className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50"
@@ -73,6 +73,19 @@ export default async function CertificationTypesPage() {
           {expiringCount > 0 && (
             <Badge label={String(expiringCount)} variant="red" />
           )}
+        </Link>
+
+        <Link
+          href="/certifications/calendar"
+          className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+            <CalendarDays className="h-5 w-5 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-slate-900">Expiry Calendar</p>
+            <p className="text-sm text-slate-500">Month-by-month expiration view</p>
+          </div>
         </Link>
       </div>
 

@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { WorkerCard } from '@/components/workers/WorkerCard'
 import { createClient } from '@/lib/supabase/server'
 import { calculateWorkerOverallStatus } from '@/lib/certifications'
-import { Users, Plus, Printer } from 'lucide-react'
+import { Users, Plus, Printer, Upload } from 'lucide-react'
 import type { WorkerStatus, CertStatus } from '@/lib/types'
 
 export default async function WorkersPage() {
@@ -89,11 +89,18 @@ export default async function WorkersPage() {
               <span className="hidden sm:inline">Print Badges</span>
             </Link>
             <Link
+              href="/workers/import"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 sm:px-4"
+            >
+              <Upload className="h-4 w-4" />
+              <span className="hidden sm:inline">Import</span>
+            </Link>
+            <Link
               href="/workers/new"
               className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
             >
               <Plus className="h-4 w-4" />
-              Add Worker
+              <span className="hidden sm:inline">Add Worker</span>
             </Link>
           </div>
         }
