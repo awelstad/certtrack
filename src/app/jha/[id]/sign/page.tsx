@@ -44,7 +44,7 @@ export default async function PublicJhaSignPage({
               <HardHat className="h-5 w-5 text-white" />
             </div>
           )}
-          <span className="font-semibold text-slate-900">{org?.name ?? 'CertTrack'}</span>
+          <span className="font-semibold text-slate-900">{org?.name ?? 'Clearwork'}</span>
         </div>
       </div>
 

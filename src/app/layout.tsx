@@ -5,7 +5,7 @@ import './globals.css'
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 
 export const metadata: Metadata = {
-  title: 'CertTrack — Construction Compliance',
+  title: 'Clearwork — Construction Compliance',
   description: 'Worker certification, JHA, and equipment compliance for construction teams.',
   manifest: '/manifest.json',
 }

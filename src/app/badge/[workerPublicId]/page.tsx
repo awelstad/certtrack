@@ -72,7 +72,7 @@ export default async function BadgeWorkerPage({ params }: { params: Promise<{ wo
         >
           {/* Branded header */}
           <BrandingHeader
-            orgName={org?.name ?? 'CertTrack'}
+            orgName={org?.name ?? 'Clearwork'}
             logoUrl={org?.logo_url}
             brandColor={brandColor}
           />
@@ -152,7 +152,7 @@ export default async function BadgeWorkerPage({ params }: { params: Promise<{ wo
           )}
 
           <div className="border-t border-slate-100 px-4 py-2 text-center">
-            <p className="text-[9px] text-slate-300">CertTrack — Construction Compliance</p>
+            <p className="text-[9px] text-slate-300">Clearwork — Construction Compliance</p>
           </div>
         </div>
       </div>

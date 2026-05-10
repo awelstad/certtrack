@@ -193,7 +193,7 @@ export default function HelpPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">Help & Guide</h1>
         <p className="mt-1 text-sm text-slate-500">
-          How every part of CertTrack works — from first setup to daily use.
+          How every part of Clearwork works — from first setup to daily use.
         </p>
       </div>
 
@@ -204,7 +204,7 @@ export default function HelpPage() {
       </div>
 
       <p className="mt-8 text-center text-xs text-slate-400">
-        CertTrack · Built for field compliance teams
+        Clearwork · Built for field compliance teams
       </p>
     </div>
   )

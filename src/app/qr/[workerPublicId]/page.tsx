@@ -106,7 +106,7 @@ export default async function QrWorkerPage({
   return (
     <div className="min-h-screen bg-slate-50">
       <BrandingHeader
-        orgName={org?.name ?? 'CertTrack'}
+        orgName={org?.name ?? 'Clearwork'}
         logoUrl={org?.logo_url}
         brandColor={brandColor}
       />
@@ -174,7 +174,7 @@ export default async function QrWorkerPage({
         </div>
 
         <p className="text-center text-xs text-slate-400">
-          Verified by CertTrack &middot; Live status as of {new Date().toLocaleDateString()}
+          Verified by Clearwork &middot; Live status as of {new Date().toLocaleDateString()}
         </p>
       </div>
     </div>

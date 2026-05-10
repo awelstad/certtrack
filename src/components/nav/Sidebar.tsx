@@ -75,7 +75,7 @@ export function Sidebar({ profile, jobs, selectedJobId }: Props) {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500">
           <HardHat className="h-5 w-5 text-white" />
         </div>
-        <span className="text-base font-bold text-white tracking-tight">CertTrack</span>
+        <span className="text-base font-bold text-white tracking-tight">Clearwork</span>
       </div>
 
       {/* Job filter */}

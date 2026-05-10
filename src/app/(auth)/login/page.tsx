@@ -15,7 +15,7 @@ export default function LoginPage() {
           <HardHat className="h-8 w-8 text-white" />
         </div>
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white">CertTrack</h1>
+          <h1 className="text-2xl font-bold text-white">Clearwork</h1>
           <p className="mt-1 text-sm text-slate-400">Construction Compliance</p>
         </div>
       </div>

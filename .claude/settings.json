@@ -14,10 +14,16 @@
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
       "Bash(cat next.config.ts)",
-      "Bash(cat next.config.js)"
+      "Bash(cat next.config.js)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\AlexanderWelstad\\\\.claude\\\\projects\\\\c--Users-AlexanderWelstad-OneDrive---FEC-Desktop-certtrack\\\\memory\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Host \"Directory ready\")",
+      "Bash(sed -i 's/title=\"Job Hazard Analysis\"/title=\"JHA\"/' \"src/app/\\(app\\)/jha/page.tsx\")",
+      "Bash(sed -i 's/description=\"Create, review, and sign JHAs for job sites.\"/description=\"Create, review, and sign Job Hazard Analyses.\"/' \"src/app/\\(app\\)/jha/page.tsx\")"
     ],
     "additionalDirectories": [
-      "c:\\Users\\AlexanderWelstad\\OneDrive - FEC\\Desktop\\certtrack"
+      "c:\\Users\\AlexanderWelstad\\OneDrive - FEC\\Desktop\\certtrack",
+      "C:\\Users\\AlexanderWelstad\\.claude\\projects\\c--Users-AlexanderWelstad-OneDrive---FEC-Desktop-certtrack\\memory"
     ]
   }
 }
