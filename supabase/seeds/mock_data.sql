@@ -27,7 +27,10 @@ DECLARE
 BEGIN
 
   -- ── Org ────────────────────────────────────────────────────
-  SELECT id INTO v_org FROM organizations ORDER BY created_at LIMIT 1;
+  SELECT id INTO v_org FROM organizations WHERE name ILIKE '%fortune%' LIMIT 1;
+  IF v_org IS NULL THEN
+    SELECT id INTO v_org FROM organizations ORDER BY created_at DESC LIMIT 1;
+  END IF;
   IF v_org IS NULL THEN RAISE EXCEPTION 'No organization found — create one first'; END IF;
 
   -- ── Equipment types ────────────────────────────────────────
