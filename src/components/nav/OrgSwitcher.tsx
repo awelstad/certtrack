@@ -7,11 +7,11 @@ import { X } from 'lucide-react'
 
 type Props = {
   orgs: { id: string; name: string }[]
-  activeOrgId: string | null
-  activeOrgName: string
+  isSwitched: boolean   // true when home_org_id is set (we're viewing another org)
+  currentOrgName: string
 }
 
-export function OrgSwitcher({ orgs, activeOrgId, activeOrgName }: Props) {
+export function OrgSwitcher({ orgs, isSwitched, currentOrgName }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
@@ -37,15 +37,15 @@ export function OrgSwitcher({ orgs, activeOrgId, activeOrgName }: Props) {
         Org View
       </p>
 
-      {activeOrgId && (
+      {isSwitched && (
         <div className="mb-1.5 flex items-center gap-1.5">
           <div className="flex-1 truncate rounded-lg bg-orange-500/20 px-2.5 py-1 text-xs font-medium text-orange-300">
-            {activeOrgName}
+            {currentOrgName}
           </div>
           <button
             onClick={handleExit}
             disabled={pending}
-            title="Exit org view"
+            title="Return to your org"
             className="flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-50"
           >
             <X className="h-3.5 w-3.5" />
@@ -54,7 +54,7 @@ export function OrgSwitcher({ orgs, activeOrgId, activeOrgName }: Props) {
       )}
 
       <select
-        value={activeOrgId ?? ''}
+        defaultValue=""
         onChange={(e) => e.target.value && handleSwitch(e.target.value)}
         disabled={pending}
         className="w-full rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs text-slate-300 focus:border-orange-400 focus:outline-none disabled:opacity-50"

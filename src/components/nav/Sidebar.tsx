@@ -103,8 +103,8 @@ export function Sidebar({ profile, jobs, selectedJobId, org, allOrgs, activeOrgI
       {profile.is_platform_admin && allOrgs && allOrgs.length > 0 && (
         <OrgSwitcher
           orgs={allOrgs}
-          activeOrgId={activeOrgId ?? null}
-          activeOrgName={org.name}
+          isSwitched={!!activeOrgId}
+          currentOrgName={org.name}
         />
       )}
 

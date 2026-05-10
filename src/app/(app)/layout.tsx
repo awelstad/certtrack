@@ -13,21 +13,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect('/login')
 
-  // Use admin client for profile fetch so org-scoped RLS can never block reading
-  // our own profile (e.g. when platform_active_org_id points to a different org)
+  // Use admin client for profile fetch — bypasses RLS so this always works
+  // regardless of which org the platform admin is currently viewing
   const adminForProfile = createAdminClient()
   const { data: profile } = await adminForProfile
     .from('profiles')
-    .select('full_name, role, avatar_url, organization_id, is_platform_admin, platform_active_org_id')
+    .select('full_name, role, avatar_url, organization_id, is_platform_admin, home_org_id')
     .eq('id', user.id)
     .single()
 
   if (!profile) redirect('/login')
 
   const isPlatformAdmin = (profile.is_platform_admin as boolean) ?? false
-  const activeOrgId = isPlatformAdmin
-    ? ((profile.platform_active_org_id ?? profile.organization_id) as string)
-    : (profile.organization_id as string)
+  // organization_id IS the active org — switchToOrg swaps it directly
+  const activeOrgId = profile.organization_id as string
 
   // Platform admins use the admin client so they can see any org's data
   const dataClient = isPlatformAdmin ? createAdminClient() : supabase
@@ -71,7 +70,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         selectedJobId={selectedJobId}
         org={orgBranding}
         allOrgs={isPlatformAdmin ? allOrgs : undefined}
-        activeOrgId={isPlatformAdmin ? (profile.platform_active_org_id as string | null) : undefined}
+        activeOrgId={isPlatformAdmin ? (profile.home_org_id as string | null) : undefined}
       />
       <TopBar profile={safeProfile} jobs={jobList} selectedJobId={selectedJobId} org={orgBranding} />
       <div className="lg:pl-64">

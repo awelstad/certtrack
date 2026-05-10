@@ -116,9 +116,22 @@ export async function switchToOrg(orgId: string): Promise<{ error?: string }> {
   if (!userId) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
+
+  // Read current org so we can restore it on exit
+  const { data: current } = await admin
+    .from('profiles')
+    .select('organization_id, home_org_id')
+    .eq('id', userId)
+    .single()
+
+  if (!current) return { error: 'Profile not found' }
+
+  // If already switched, preserve the original home org
+  const homeOrg = current.home_org_id ?? current.organization_id
+
   const { error } = await admin
     .from('profiles')
-    .update({ platform_active_org_id: orgId })
+    .update({ organization_id: orgId, home_org_id: homeOrg })
     .eq('id', userId)
 
   if (error) return { error: error.message }
@@ -134,9 +147,18 @@ export async function exitOrgSwitch(): Promise<{ error?: string }> {
   if (!userId) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
+
+  const { data: current } = await admin
+    .from('profiles')
+    .select('home_org_id')
+    .eq('id', userId)
+    .single()
+
+  if (!current?.home_org_id) return {} // already home
+
   const { error } = await admin
     .from('profiles')
-    .update({ platform_active_org_id: null })
+    .update({ organization_id: current.home_org_id, home_org_id: null })
     .eq('id', userId)
 
   if (error) return { error: error.message }
