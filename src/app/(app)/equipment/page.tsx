@@ -3,13 +3,18 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Pagination } from '@/components/ui/Pagination'
 import { EquipmentStatusBadge } from '@/components/equipment/EquipmentStatusBadge'
 import { Wrench, ChevronRight, Plus, AlertTriangle, ClipboardList } from 'lucide-react'
 import type { Role } from '@/lib/types'
 
 const MANAGER_ROLES: Role[] = ['owner', 'admin', 'pm', 'superintendent']
+const PAGE_SIZE = 50
 
-export default async function EquipmentPage() {
+export default async function EquipmentPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10))
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase
@@ -29,19 +34,30 @@ export default async function EquipmentPage() {
     selectedJobName = jobRow?.name ?? null
   }
 
+  const from = (page - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
   let equipmentQuery = supabase
     .from('equipment')
-    .select('id, name, make, model, status, last_inspection_at, equipment_types(name), jobs(name)')
+    .select('id, name, make, model, status, last_inspection_at, equipment_types(name), jobs(name)', { count: 'exact' })
     .eq('organization_id', profile!.organization_id)
     .order('created_at', { ascending: false })
+    .range(from, to)
 
   if (selectedJobId) {
     equipmentQuery = equipmentQuery.eq('job_id', selectedJobId)
   }
 
-  const { data: equipment } = await equipmentQuery
+  const { data: equipment, count } = await equipmentQuery
+  const total = count ?? 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
-  const ooCount = (equipment ?? []).filter((e) => e.status === 'out_of_service').length
+  // Out-of-service count is across ALL pages, not just current page
+  const { count: ooCount } = await supabase
+    .from('equipment')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', profile!.organization_id)
+    .eq('status', 'out_of_service')
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -71,14 +87,14 @@ export default async function EquipmentPage() {
       />
 
       {/* Out-of-service alert */}
-      {ooCount > 0 && (
+      {(ooCount ?? 0) > 0 && (
         <Link
           href="/equipment/out-of-service"
           className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-3.5 transition-colors hover:bg-red-100"
         >
           <AlertTriangle className="h-5 w-5 shrink-0 text-red-600" />
           <p className="flex-1 text-sm font-semibold text-red-800">
-            {ooCount} piece{ooCount !== 1 ? 's' : ''} of equipment {ooCount !== 1 ? 'are' : 'is'} out of service
+            {ooCount ?? 0} piece{(ooCount ?? 0) !== 1 ? 's' : ''} of equipment {(ooCount ?? 0) !== 1 ? 'are' : 'is'} out of service
           </p>
           <ChevronRight className="h-4 w-4 text-red-500" />
         </Link>
@@ -140,6 +156,7 @@ export default async function EquipmentPage() {
               )
             })}
           </ul>
+          <Pagination page={page} totalPages={totalPages} total={total} pageSize={PAGE_SIZE} basePath="/equipment" />
         </div>
       )}
     </div>

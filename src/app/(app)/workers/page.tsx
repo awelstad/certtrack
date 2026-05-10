@@ -2,13 +2,19 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Pagination } from '@/components/ui/Pagination'
 import { WorkerCard } from '@/components/workers/WorkerCard'
 import { createClient } from '@/lib/supabase/server'
 import { calculateWorkerOverallStatus } from '@/lib/certifications'
 import { Users, Plus, Printer, Upload } from 'lucide-react'
 import type { WorkerStatus, CertStatus } from '@/lib/types'
 
-export default async function WorkersPage() {
+const PAGE_SIZE = 50
+
+export default async function WorkersPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10))
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase
@@ -34,26 +40,34 @@ export default async function WorkersPage() {
     selectedJobName = jobRow?.name ?? null
   }
 
-  let workers: typeof allWorkers = []
-  let allWorkers: { id: string; first_name: string; last_name: string; trade: string | null; employer: string | null; status: string; avatar_url: string | null }[] = []
+  type Worker = { id: string; first_name: string; last_name: string; trade: string | null; employer: string | null; status: string; avatar_url: string | null }
+  let workers: Worker[] = []
+  let total = 0
 
   if (scopedWorkerIds !== null && scopedWorkerIds.length === 0) {
     // Job exists but has no workers assigned
     workers = []
+    total = 0
   } else {
+    const from = (page - 1) * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+
     const query = supabase
       .from('workers')
-      .select('id, first_name, last_name, trade, employer, status, avatar_url')
+      .select('id, first_name, last_name, trade, employer, status, avatar_url', { count: 'exact' })
       .eq('organization_id', orgId)
       .order('last_name')
+      .range(from, to)
 
-    const { data } = scopedWorkerIds
+    const { data, count } = scopedWorkerIds
       ? await query.in('id', scopedWorkerIds)
       : await query
 
-    allWorkers = data ?? []
-    workers = allWorkers
+    workers = (data ?? []) as Worker[]
+    total = count ?? 0
   }
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   // Fetch all certs in one query — no N+1
   const workerIds = workers.map((w) => w.id)
@@ -138,6 +152,7 @@ export default async function WorkersPage() {
               />
             ))}
           </ul>
+          <Pagination page={page} totalPages={totalPages} total={total} pageSize={PAGE_SIZE} basePath="/workers" />
         </div>
       )}
     </div>

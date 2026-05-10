@@ -3,14 +3,19 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Pagination } from '@/components/ui/Pagination'
 import { ShieldCheck, Plus, ChevronRight, LayoutTemplate, Users, CalendarDays } from 'lucide-react'
 import type { Role } from '@/lib/types'
 
 const MANAGER_ROLES: Role[] = ['owner', 'admin', 'pm', 'superintendent']
+const PAGE_SIZE = 50
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
-export default async function ToolboxPage() {
+export default async function ToolboxPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10))
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase
@@ -25,18 +30,24 @@ export default async function ToolboxPage() {
   const cookieStore = await cookies()
   const selectedJobId = cookieStore.get('selected_job_id')?.value ?? null
 
-  // Fetch talks
+  const from = (page - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
+  // Fetch paginated talks
   let query = supabase
     .from('toolbox_talks')
-    .select('id, title, topic, talk_date, status, conducted_by, public_token, jobs(name)')
+    .select('id, title, topic, talk_date, status, conducted_by, public_token, jobs(name)', { count: 'exact' })
     .eq('organization_id', orgId)
     .order('talk_date', { ascending: false })
+    .range(from, to)
 
   if (selectedJobId) {
     query = query.eq('job_id', selectedJobId)
   }
 
-  const { data: talks } = await query
+  const { data: talks, count } = await query
+  const total = count ?? 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   // Fetch signature counts per talk
   const talkIds = (talks ?? []).map(t => t.id)
@@ -50,14 +61,31 @@ export default async function ToolboxPage() {
   const sigMap = new Map<string, number>()
   sigCounts?.forEach(s => sigMap.set(s.talk_id, (sigMap.get(s.talk_id) ?? 0) + 1))
 
-  // Yearly stats
+  // Yearly stats — query separately so pagination doesn't affect the chart
   const thisYear = new Date().getFullYear()
-  const yearTalks = (talks ?? []).filter(t => new Date(t.talk_date).getFullYear() === thisYear)
-  const totalSigsThisYear = yearTalks.reduce((acc, t) => acc + (sigMap.get(t.id) ?? 0), 0)
+  const yearStart = `${thisYear}-01-01`
+  const yearEnd   = `${thisYear}-12-31`
 
-  // Per-month count for this year
+  let statsQuery = supabase
+    .from('toolbox_talks')
+    .select('id, talk_date')
+    .eq('organization_id', orgId)
+    .gte('talk_date', yearStart)
+    .lte('talk_date', yearEnd)
+
+  if (selectedJobId) statsQuery = statsQuery.eq('job_id', selectedJobId)
+
+  const { data: yearTalksAll } = await statsQuery
+  const yearTalkIds = (yearTalksAll ?? []).map(t => t.id)
+
+  const { data: yearSigs } = yearTalkIds.length
+    ? await supabase.from('toolbox_talk_signatures').select('talk_id').in('talk_id', yearTalkIds)
+    : { data: [] }
+
+  const totalSigsThisYear = (yearSigs ?? []).length
+
   const byMonth = Array(12).fill(0)
-  yearTalks.forEach(t => {
+  ;(yearTalksAll ?? []).forEach(t => {
     const m = new Date(t.talk_date).getMonth()
     byMonth[m]++
   })
@@ -94,7 +122,7 @@ export default async function ToolboxPage() {
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-medium text-slate-500">{thisYear} — Total Talks</p>
-          <p className="mt-1 text-3xl font-bold text-slate-900">{yearTalks.length}</p>
+          <p className="mt-1 text-3xl font-bold text-slate-900">{yearTalksAll?.length ?? 0}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-medium text-slate-500">{thisYear} — Total Attendees</p>
@@ -178,6 +206,7 @@ export default async function ToolboxPage() {
               )
             })}
           </ul>
+          <Pagination page={page} totalPages={totalPages} total={total} pageSize={PAGE_SIZE} basePath="/toolbox" />
         </div>
       )}
     </div>

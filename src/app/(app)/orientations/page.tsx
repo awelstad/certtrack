@@ -3,10 +3,16 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Pagination } from '@/components/ui/Pagination'
 import { Badge } from '@/components/ui/Badge'
 import { BookOpen, ChevronRight, Plus, Users } from 'lucide-react'
 
-export default async function OrientationsPage() {
+const PAGE_SIZE = 50
+
+export default async function OrientationsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10))
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase
@@ -24,18 +30,24 @@ export default async function OrientationsPage() {
     selectedJobName = jobRow?.name ?? null
   }
 
+  const from = (page - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
   let orientationQuery = supabase
     .from('orientation_modules')
-    .select('id, title, is_required, include_in_compliance, job_id, jobs(name)')
+    .select('id, title, is_required, include_in_compliance, job_id, jobs(name)', { count: 'exact' })
     .eq('organization_id', profile!.organization_id)
     .order('created_at', { ascending: false })
+    .range(from, to)
 
   if (selectedJobId) {
     // Show this job's orientations + general (no job) orientations
     orientationQuery = orientationQuery.or(`job_id.eq.${selectedJobId},job_id.is.null`)
   }
 
-  const { data: orientations } = await orientationQuery
+  const { data: orientations, count } = await orientationQuery
+  const total = count ?? 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   // Fetch sign-off counts in one query
   const orientationIds = (orientations ?? []).map((o) => o.id)
@@ -123,6 +135,7 @@ export default async function OrientationsPage() {
               )
             })}
           </ul>
+          <Pagination page={page} totalPages={totalPages} total={total} pageSize={PAGE_SIZE} basePath="/orientations" />
         </div>
       )}
     </div>

@@ -3,10 +3,16 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Pagination } from '@/components/ui/Pagination'
 import { JhaStatusBadge } from '@/components/jha/JhaStatusBadge'
 import { ClipboardList, ChevronRight, Plus, LayoutTemplate } from 'lucide-react'
 
-export default async function JhaPage() {
+const PAGE_SIZE = 50
+
+export default async function JhaPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10))
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase
@@ -24,17 +30,23 @@ export default async function JhaPage() {
     selectedJobName = jobRow?.name ?? null
   }
 
+  const from = (page - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
   let jhaQuery = supabase
     .from('jhas')
-    .select('id, title, status, work_date, jobs(name)')
+    .select('id, title, status, work_date, jobs(name)', { count: 'exact' })
     .eq('organization_id', profile!.organization_id)
     .order('created_at', { ascending: false })
+    .range(from, to)
 
   if (selectedJobId) {
     jhaQuery = jhaQuery.eq('job_id', selectedJobId)
   }
 
-  const { data: jhas } = await jhaQuery
+  const { data: jhas, count } = await jhaQuery
+  const total = count ?? 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   const isManager = ['owner', 'admin', 'pm', 'superintendent'].includes(profile?.role ?? '')
 
@@ -110,6 +122,7 @@ export default async function JhaPage() {
               )
             })}
           </ul>
+          <Pagination page={page} totalPages={totalPages} total={total} pageSize={PAGE_SIZE} basePath="/jha" />
         </div>
       )}
     </div>

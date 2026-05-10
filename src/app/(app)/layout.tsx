@@ -13,7 +13,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  // Use admin client for profile fetch so org-scoped RLS can never block reading
+  // our own profile (e.g. when platform_active_org_id points to a different org)
+  const adminForProfile = createAdminClient()
+  const { data: profile } = await adminForProfile
     .from('profiles')
     .select('full_name, role, avatar_url, organization_id, is_platform_admin, platform_active_org_id')
     .eq('id', user.id)
