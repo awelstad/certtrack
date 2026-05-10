@@ -14,15 +14,16 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: myProfile } = await supabase
+  const admin = createAdminClient()
+
+  // Use admin client so org-scoped RLS never blocks reading our own profile
+  const { data: myProfile } = await admin
     .from('profiles')
     .select('is_platform_admin')
     .eq('id', user.id)
     .single()
 
   if (!myProfile?.is_platform_admin) redirect('/dashboard')
-
-  const admin = createAdminClient()
 
   const { data: org } = await admin
     .from('organizations')
@@ -39,8 +40,9 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
     .eq('organization_id', id)
     .order('created_at', { ascending: true })
 
-  // Get emails from auth
-  const { data: { users: authUsers } } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  // Get emails from auth — guard against null data
+  const listResult = await admin.auth.admin.listUsers({ perPage: 1000 })
+  const authUsers = listResult.data?.users ?? []
   const emailMap = new Map(authUsers.map((u) => [u.id, u.email ?? '']))
 
   // Stats counts
