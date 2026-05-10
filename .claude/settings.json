@@ -12,7 +12,9 @@
       "PowerShell(gh auth status 2>&1)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(cat next.config.ts)",
+      "Bash(cat next.config.js)"
     ],
     "additionalDirectories": [
       "c:\\Users\\AlexanderWelstad\\OneDrive - FEC\\Desktop\\certtrack"
