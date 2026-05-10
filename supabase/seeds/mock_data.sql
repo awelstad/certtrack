@@ -236,7 +236,7 @@ The Golden Rules:
 • Only YOU remove your lock. If you leave the site, your lock comes with you — period.
 • Tagout alone (no lock) is NOT sufficient when locking is possible
 • For group work, use a hasp — each crew member clips their own lock before anyone works
-• Never remove someone else's LOTO device — follow your company procedure to contact that person
+• Never remove someone else''s LOTO device — follow your company procedure to contact that person
 
 Re-Energizing After Work:
 1. Confirm all tools and materials are removed from the equipment
