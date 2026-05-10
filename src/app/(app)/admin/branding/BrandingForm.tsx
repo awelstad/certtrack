@@ -1,8 +1,8 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { updateBranding } from '@/app/actions/branding'
+import { uploadOrgLogo } from '@/app/actions/uploadLogo'
 import { BrandingHeader } from '@/components/ui/BrandingHeader'
 import { Building2, Loader2, Upload, CheckCircle2, X } from 'lucide-react'
 
@@ -47,25 +47,17 @@ export function BrandingForm({
     setUploading(true)
     setUploadError(null)
 
-    const supabase = createClient()
-    const ext = file.name.split('.').pop() ?? 'png'
-    const path = `${orgId}/org-logo.${ext}`
+    const fd = new FormData()
+    fd.append('file', file)
+    const result = await uploadOrgLogo(fd)
 
-    const { error: uploadErr } = await supabase.storage
-      .from('worker-avatars')
-      .upload(path, file, { upsert: true })
-
-    if (uploadErr) {
-      setUploadError(uploadErr.message)
+    if (result.error) {
+      setUploadError(result.error)
       setUploading(false)
       return
     }
 
-    const { data: urlData } = supabase.storage
-      .from('worker-avatars')
-      .getPublicUrl(path)
-
-    setLogoUrl(urlData.publicUrl)
+    setLogoUrl(result.url ?? null)
     setUploading(false)
   }
 
