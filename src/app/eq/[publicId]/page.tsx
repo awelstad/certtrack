@@ -1,0 +1,185 @@
+import { notFound } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { ClearworkMark } from '@/components/ui/ClearworkMark'
+import { Wrench, CheckCircle2, AlertTriangle, Clock, Calendar } from 'lucide-react'
+
+const STATUS_CONFIG = {
+  active: {
+    label: 'Active — Cleared for Use',
+    icon: CheckCircle2,
+    pill: 'bg-green-100 text-green-700 border border-green-200',
+    icon_class: 'text-green-600',
+  },
+  out_of_service: {
+    label: 'Out of Service — DO NOT USE',
+    icon: AlertTriangle,
+    pill: 'bg-red-100 text-red-700 border border-red-200',
+    icon_class: 'text-red-600',
+  },
+  maintenance: {
+    label: 'In Maintenance',
+    icon: Clock,
+    pill: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
+    icon_class: 'text-yellow-600',
+  },
+  retired: {
+    label: 'Retired',
+    icon: AlertTriangle,
+    pill: 'bg-slate-100 text-slate-600 border border-slate-200',
+    icon_class: 'text-slate-500',
+  },
+}
+
+export default async function PublicEquipmentPage({ params }: { params: Promise<{ publicId: string }> }) {
+  const { publicId } = await params
+  const admin = createAdminClient()
+
+  const { data: equipment } = await admin
+    .from('equipment')
+    .select(`
+      id, name, make, model, year, serial_number, status,
+      last_inspection_at, next_inspection_due, notes, organization_id,
+      equipment_types(name, category),
+      jobs(name)
+    `)
+    .eq('public_id', publicId)
+    .single()
+
+  if (!equipment) notFound()
+
+  const { data: org } = await admin
+    .from('organizations')
+    .select('name, logo_url, brand_color')
+    .eq('id', equipment.organization_id)
+    .single()
+
+  const { data: inspections } = await admin
+    .from('equipment_inspections')
+    .select('id, inspection_date, status, inspector_name, created_at')
+    .eq('equipment_id', equipment.id)
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  const brandColor = org?.brand_color ?? '#0f172a'
+  const eqType = equipment.equipment_types as unknown as { name: string; category: string } | null
+  const job    = equipment.jobs as unknown as { name: string } | null
+  const makeModel = [equipment.make, equipment.model].filter(Boolean).join(' ')
+
+  const statusKey = (equipment.status ?? 'active') as keyof typeof STATUS_CONFIG
+  const config = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.active
+  const { Icon } = { Icon: config.icon }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* Branding header */}
+      <div className="px-5 py-3.5" style={{ backgroundColor: brandColor }}>
+        <div className="mx-auto flex max-w-md items-center gap-3">
+          {org?.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={org.logo_url} alt={org.name} className="h-8 w-auto max-w-[100px] object-contain" />
+          ) : (
+            <ClearworkMark size={28} />
+          )}
+          <span className="font-semibold text-white">{org?.name ?? 'Clearwork'}</span>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-md space-y-5 px-4 py-6">
+        {/* Equipment identity card */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-4">
+            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl ${equipment.status === 'out_of_service' ? 'bg-red-50 border border-red-200' : 'bg-slate-100'}`}>
+              <Wrench className={`h-7 w-7 ${equipment.status === 'out_of_service' ? 'text-red-500' : 'text-slate-500'}`} />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900">{equipment.name}</h1>
+              {eqType && <p className="text-sm text-slate-500">{eqType.category} · {eqType.name}</p>}
+              {makeModel && <p className="text-sm text-slate-500">{makeModel}{equipment.year ? ` (${equipment.year})` : ''}</p>}
+            </div>
+          </div>
+
+          {/* Status pill */}
+          <div className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${config.pill}`}>
+            <Icon className={`h-4 w-4 ${config.icon_class}`} />
+            {config.label}
+          </div>
+
+          {/* Details */}
+          <div className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-sm">
+            {job && (
+              <div className="flex justify-between">
+                <span className="text-slate-500">Job Site</span>
+                <span className="font-medium text-slate-900">{job.name}</span>
+              </div>
+            )}
+            {equipment.serial_number && (
+              <div className="flex justify-between">
+                <span className="text-slate-500">Serial #</span>
+                <span className="font-mono text-slate-900">{equipment.serial_number}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-slate-500">Last Inspected</span>
+              <span className="font-medium text-slate-900">
+                {equipment.last_inspection_at
+                  ? new Date(equipment.last_inspection_at).toLocaleDateString()
+                  : 'Never'}
+              </span>
+            </div>
+            {equipment.next_inspection_due && (
+              <div className="flex justify-between">
+                <span className="text-slate-500">Next Inspection Due</span>
+                <span className={`font-medium ${new Date(equipment.next_inspection_due) < new Date() ? 'text-red-600' : 'text-slate-900'}`}>
+                  {new Date(equipment.next_inspection_due).toLocaleDateString()}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {equipment.notes && (
+            <div className="mt-3 rounded-lg bg-yellow-50 border border-yellow-200 px-3 py-2 text-xs text-yellow-800">
+              <strong>Note:</strong> {equipment.notes}
+            </div>
+          )}
+        </div>
+
+        {/* Recent inspection history */}
+        {inspections && inspections.length > 0 && (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-5 py-3">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Calendar className="h-4 w-4 text-slate-400" />
+                Recent Inspections
+              </h2>
+            </div>
+            <ul className="divide-y divide-slate-100">
+              {inspections.map(ins => (
+                <li key={ins.id} className="flex items-center justify-between px-5 py-3 text-sm">
+                  <div>
+                    <p className="font-medium text-slate-900">
+                      {new Date(ins.inspection_date).toLocaleDateString()}
+                    </p>
+                    {ins.inspector_name && <p className="text-xs text-slate-500">{ins.inspector_name}</p>}
+                  </div>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    ins.status === 'passed'
+                      ? 'bg-green-100 text-green-700'
+                      : ins.status === 'failed'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {ins.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <p className="text-center text-xs text-slate-400">
+          Verified by Clearwork · Live status as of {new Date().toLocaleDateString()}
+        </p>
+      </div>
+    </div>
+  )
+}

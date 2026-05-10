@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { EquipmentStatusBadge } from '@/components/equipment/EquipmentStatusBadge'
 import { EquipmentOutOfServiceBanner } from '@/components/equipment/EquipmentOutOfServiceBanner'
 import { EquipmentInspectionHistory } from '@/components/equipment/EquipmentInspectionHistory'
-import { ArrowLeft, ClipboardCheck, Pencil, Wrench, Calendar, Hash, Building2 } from 'lucide-react'
+import { ArrowLeft, ClipboardCheck, Pencil, Wrench, Calendar, Hash, Building2, QrCode } from 'lucide-react'
 import type { Role } from '@/lib/types'
 
 const MANAGER_ROLES: Role[] = ['owner', 'admin', 'pm', 'superintendent']
@@ -24,7 +25,7 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
     .from('equipment')
     .select(`
       id, name, make, model, serial_number, company_asset_number, year,
-      status, photo_url, notes, last_inspection_at, next_inspection_due,
+      status, photo_url, notes, last_inspection_at, next_inspection_due, public_id,
       equipment_types(name, category),
       jobs(name),
       workers!assigned_worker_id(first_name, last_name)
@@ -46,6 +47,12 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
   const eqType = equipment.equipment_types as unknown as { name: string; category: string } | null
   const job    = equipment.jobs as unknown as { name: string } | null
   const worker = equipment.workers as unknown as { first_name: string; last_name: string } | null
+
+  const headersList = await headers()
+  const host = headersList.get('host') ?? 'clearwork.app'
+  const protocol = host.startsWith('localhost') ? 'http' : 'https'
+  const eqUrl = `${protocol}://${host}/eq/${equipment.public_id}`
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(eqUrl)}&margin=6&color=0f172a`
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -159,23 +166,57 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
         </table>
       </div>
 
-      {/* Inspection history */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-          <h2 className="text-sm font-semibold text-slate-700">
-            Inspection History ({inspections?.length ?? 0})
-          </h2>
-          <Link
-            href={`/equipment/${id}/inspections`}
-            className="text-xs text-orange-600 hover:text-orange-800 font-medium"
-          >
-            View all
-          </Link>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        {/* Inspection history */}
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white lg:col-span-2">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+            <h2 className="text-sm font-semibold text-slate-700">
+              Inspection History ({inspections?.length ?? 0})
+            </h2>
+            <Link
+              href={`/equipment/${id}/inspections`}
+              className="text-xs text-orange-600 hover:text-orange-800 font-medium"
+            >
+              View all
+            </Link>
+          </div>
+          <EquipmentInspectionHistory
+            inspections={inspections ?? []}
+            equipmentId={id}
+          />
         </div>
-        <EquipmentInspectionHistory
-          inspections={inspections ?? []}
-          equipmentId={id}
-        />
+
+        {/* QR code panel */}
+        <div className="space-y-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm text-center">
+            <div className="mb-3 flex items-center justify-center gap-2">
+              <QrCode className="h-4 w-4 text-slate-500" />
+              <h2 className="text-sm font-semibold text-slate-700">Equipment QR Code</h2>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={qrImageUrl}
+              alt="Equipment QR Code"
+              className="mx-auto h-48 w-48 rounded-lg"
+            />
+            <p className="mt-3 text-xs text-slate-500">Scan to view live status — no login needed</p>
+            <a
+              href={eqUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 block truncate text-xs text-orange-600 hover:text-orange-800"
+            >
+              {eqUrl}
+            </a>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-500 space-y-1">
+            <p className="font-semibold text-slate-700">How to use</p>
+            <p>1. Print or display this QR code on the equipment.</p>
+            <p>2. Workers scan to see current status instantly.</p>
+            <p>3. Status updates here reflect on the QR page in real time.</p>
+          </div>
+        </div>
       </div>
     </div>
   )

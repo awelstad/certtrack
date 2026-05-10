@@ -3,14 +3,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, Briefcase, AlertTriangle, HelpCircle } from 'lucide-react'
+import { LayoutDashboard, Users, Briefcase, AlertTriangle, ShieldCheck } from 'lucide-react'
 
 const items = [
   { href: '/dashboard', label: 'Home',     icon: LayoutDashboard },
   { href: '/workers',   label: 'Workers',  icon: Users },
   { href: '/jobs',      label: 'Jobs',     icon: Briefcase },
   { href: '/jha',       label: 'JHA',      icon: AlertTriangle },
-  { href: '/help',      label: 'Help',     icon: HelpCircle },
+  { href: '/toolbox',   label: 'Toolbox',  icon: ShieldCheck },
 ]
 
 export function MobileNav() {

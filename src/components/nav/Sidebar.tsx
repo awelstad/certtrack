@@ -19,6 +19,7 @@ import {
   ChevronRight,
   HelpCircle,
   Building2,
+  ShieldCheck,
 } from 'lucide-react'
 import { JobFilterSelect } from './JobFilterSelect'
 import { ClearworkMark } from '@/components/ui/ClearworkMark'
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
   { href: '/orientations', label: 'Orientations', icon: BookOpen },
   { href: '/jha', label: 'JHA', icon: AlertTriangle },
   { href: '/equipment', label: 'Equipment', icon: Wrench },
+  { href: '/toolbox', label: 'Toolbox Talks', icon: ShieldCheck },
   { href: '/reports', label: 'Reports', icon: BarChart2 },
   { href: '/help', label: 'Help & Guide', icon: HelpCircle },
 ]

@@ -36,7 +36,9 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/login') ||
     pathname.startsWith('/qr/') ||
     pathname.startsWith('/badge/') ||
-    pathname.match(/^\/jha\/[^/]+\/sign$/)
+    pathname.startsWith('/eq/') ||
+    pathname.match(/^\/jha\/[^/]+\/sign$/) ||
+    pathname.match(/^\/toolbox\/[^/]+\/sign$/)
 
   // Redirect unauthenticated users to login
   if (!user && !isPublic) {
