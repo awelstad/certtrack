@@ -25,24 +25,24 @@ export default async function JhaPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <PageHeader
-        title="Job Hazard Analysis"
-        description="Create, review, and sign JHAs for job sites."
+        title="JHA"
+        description="Create, review, and sign Job Hazard Analyses."
         action={
           isManager ? (
             <div className="flex gap-2">
               <Link
                 href="/jha/templates"
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 sm:px-4"
               >
                 <LayoutTemplate className="h-4 w-4" />
-                Templates
+                <span className="hidden sm:inline">Templates</span>
               </Link>
               <Link
                 href="/jha/new"
-                className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
+                className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 sm:px-4"
               >
                 <Plus className="h-4 w-4" />
-                New JHA
+                <span className="hidden sm:inline">New JHA</span>
               </Link>
             </div>
           ) : undefined

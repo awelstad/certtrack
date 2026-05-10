@@ -83,10 +83,10 @@ export default async function WorkersPage() {
           <div className="flex gap-2">
             <Link
               href="/workers/badges"
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 sm:px-4"
             >
               <Printer className="h-4 w-4" />
-              Print Badges
+              <span className="hidden sm:inline">Print Badges</span>
             </Link>
             <Link
               href="/workers/new"

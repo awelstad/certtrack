@@ -51,11 +51,12 @@ export function WorkerCard({ worker: w, certStatus }: Props) {
             {w.first_name} {w.last_name}
           </p>
           <p className="truncate text-sm text-slate-500">
-            {[w.trade, w.employer].filter(Boolean).join(' · ') || 'No trade assigned'}
+            {w.trade || 'No trade assigned'}
+            {w.employer && <span className="hidden sm:inline"> · {w.employer}</span>}
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {certStatus && <StatusBadge status={certStatus} />}
           {w.status !== 'active' && (
             <Badge label={w.status} variant={employmentVariant[w.status]} />

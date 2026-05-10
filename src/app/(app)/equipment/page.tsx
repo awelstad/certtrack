@@ -37,18 +37,18 @@ export default async function EquipmentPage() {
             {isManager && (
               <Link
                 href="/equipment/templates"
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 sm:px-4"
               >
                 <ClipboardList className="h-4 w-4" />
-                Templates
+                <span className="hidden sm:inline">Templates</span>
               </Link>
             )}
             <Link
               href="/equipment/new"
-              className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
+              className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 sm:px-4"
             >
               <Plus className="h-4 w-4" />
-              Add Equipment
+              <span className="hidden sm:inline">Add Equipment</span>
             </Link>
           </div>
         }

@@ -24,7 +24,7 @@ export function TopBar({ profile, jobs, selectedJobId }: Props) {
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-orange-500">
             <HardHat className="h-4 w-4 text-white" />
           </div>
-          <span className="text-sm font-bold text-slate-900">CertTrack</span>
+          <span className="hidden text-sm font-bold text-slate-900 sm:inline">CertTrack</span>
         </Link>
 
         {/* Job filter */}
