@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import {
   AlertTriangle, Clock, XCircle, ShieldOff, Users,
@@ -120,6 +121,35 @@ export default async function DashboardPage() {
   const in30d = new Date(Date.now() + 30 * 864e5).toISOString().split('T')[0]
   const in7d  = new Date(Date.now() +  7 * 864e5).toISOString().split('T')[0]
 
+  const cookieStore = await cookies()
+  const selectedJobId = cookieStore.get('selected_job_id')?.value ?? null
+
+  // When a job is selected, resolve the worker IDs for that job first
+  let scopedWorkerIds: string[] | null = null
+  let selectedJobName: string | null = null
+
+  if (selectedJobId) {
+    const [{ data: jobWorkers }, { data: jobRow }] = await Promise.all([
+      supabase.from('job_workers').select('worker_id').eq('job_id', selectedJobId),
+      supabase.from('jobs').select('name').eq('id', selectedJobId).single(),
+    ])
+    scopedWorkerIds = (jobWorkers ?? []).map((jw) => jw.worker_id)
+    selectedJobName = jobRow?.name ?? null
+  }
+
+  const hasWorkers = scopedWorkerIds === null || scopedWorkerIds.length > 0
+
+  // Helper to scope a cert query to job workers when a filter is active
+  function certQuery() {
+    const q = supabase.from('worker_certifications').select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId)
+    return scopedWorkerIds ? q.in('worker_id', scopedWorkerIds) : q
+  }
+  function certQueryFull() {
+    const q = supabase.from('worker_certifications').select('worker_id').eq('organization_id', orgId)
+    return scopedWorkerIds ? q.in('worker_id', scopedWorkerIds) : q
+  }
+
   const [
     { count: expiredCertCount },
     { count: expiringCertCount },
@@ -132,47 +162,46 @@ export default async function DashboardPage() {
     { count: failedInspCount },
     { count: dueSoonCount },
   ] = await Promise.all([
-    // Expired approved certs
-    supabase.from('worker_certifications').select('id', { count: 'exact', head: true })
-      .eq('organization_id', orgId).eq('status', 'approved').lt('expiry_date', today),
-    // Expiring soon (30 days)
-    supabase.from('worker_certifications').select('id', { count: 'exact', head: true })
-      .eq('organization_id', orgId).eq('status', 'approved').gte('expiry_date', today).lte('expiry_date', in30d),
-    // Pending review
-    supabase.from('worker_certifications').select('id', { count: 'exact', head: true })
-      .eq('organization_id', orgId).eq('status', 'pending'),
-    // Rejected
-    supabase.from('worker_certifications').select('id', { count: 'exact', head: true })
-      .eq('organization_id', orgId).eq('status', 'rejected'),
-    // Worker IDs with red-status certs (rejected OR approved-but-expired)
-    supabase.from('worker_certifications').select('worker_id')
-      .eq('organization_id', orgId)
-      .or(`status.eq.rejected,and(status.eq.approved,expiry_date.lt.${today})`),
-    // Active workers total
-    supabase.from('workers').select('id', { count: 'exact', head: true })
-      .eq('organization_id', orgId).eq('status', 'active'),
-    // All JHA statuses (for split computation)
-    supabase.from('jhas').select('status').eq('organization_id', orgId),
-    // Equipment out of service
+    hasWorkers
+      ? certQuery().eq('status', 'approved').lt('expiry_date', today)
+      : Promise.resolve({ count: 0 }),
+    hasWorkers
+      ? certQuery().eq('status', 'approved').gte('expiry_date', today).lte('expiry_date', in30d)
+      : Promise.resolve({ count: 0 }),
+    hasWorkers
+      ? certQuery().eq('status', 'pending')
+      : Promise.resolve({ count: 0 }),
+    hasWorkers
+      ? certQuery().eq('status', 'rejected')
+      : Promise.resolve({ count: 0 }),
+    hasWorkers
+      ? certQueryFull().or(`status.eq.rejected,and(status.eq.approved,expiry_date.lt.${today})`)
+      : Promise.resolve({ data: [] }),
+    scopedWorkerIds
+      ? (scopedWorkerIds.length
+          ? supabase.from('workers').select('id', { count: 'exact', head: true })
+              .eq('organization_id', orgId).eq('status', 'active').in('id', scopedWorkerIds)
+          : Promise.resolve({ count: 0 }))
+      : supabase.from('workers').select('id', { count: 'exact', head: true })
+          .eq('organization_id', orgId).eq('status', 'active'),
+    selectedJobId
+      ? supabase.from('jhas').select('status').eq('organization_id', orgId).eq('job_id', selectedJobId)
+      : supabase.from('jhas').select('status').eq('organization_id', orgId),
     supabase.from('equipment').select('id', { count: 'exact', head: true })
       .eq('organization_id', orgId).eq('status', 'out_of_service'),
-    // Failed/OOS inspections
     supabase.from('equipment_inspections').select('id', { count: 'exact', head: true })
       .eq('organization_id', orgId).in('status', ['fail', 'out_of_service']),
-    // Equipment never inspected or inspection overdue (next_inspection_due ≤ 7d out)
     supabase.from('equipment').select('id', { count: 'exact', head: true })
       .eq('organization_id', orgId).eq('status', 'active')
       .or(`next_inspection_due.lte.${in7d},last_inspection_at.is.null`),
   ])
 
-  // Derived stats
   const missingCertCount  = (pendingCertCount ?? 0) + (rejectedCertCount ?? 0)
   const notClearedCount   = new Set((notClearedCerts ?? []).map((c) => c.worker_id)).size
   const openJhaCount      = (jhaList ?? []).filter((j) => ['draft', 'active'].includes(j.status)).length
   const needingSigsCount  = (jhaList ?? []).filter((j) => j.status === 'active').length
   const completedJhaCount = (jhaList ?? []).filter((j) => j.status === 'completed').length
 
-  // Summary counts for critical-issue banner
   const criticalCount = (expiredCertCount ?? 0) + (oosCount ?? 0) + notClearedCount
 
   return (
@@ -184,7 +213,9 @@ export default async function DashboardPage() {
           {greeting()}, {profile?.full_name?.split(' ')[0] ?? 'there'}
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          {selectedJobName
+            ? `Showing data for: ${selectedJobName}`
+            : new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
       </div>
 
@@ -209,43 +240,11 @@ export default async function DashboardPage() {
       <section className="mb-8">
         <SectionHeader title="Certifications" linkHref="/reports" linkLabel="All reports" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <StatCard
-            label="Expired Certs"
-            value={expiredCertCount ?? 0}
-            href="/reports/expired"
-            icon={XCircle}
-            severity="critical"
-          />
-          <StatCard
-            label="Expiring Soon"
-            value={expiringCertCount ?? 0}
-            href="/reports/expiring"
-            icon={Clock}
-            severity="warning"
-            note="within 30 days"
-          />
-          <StatCard
-            label="Missing / Rejected"
-            value={missingCertCount}
-            href="/reports/missing"
-            icon={ShieldOff}
-            severity="warning"
-          />
-          <StatCard
-            label="Pending Approval"
-            value={pendingCertCount ?? 0}
-            href="/certifications"
-            icon={FileCheck}
-            severity="info"
-          />
-          <StatCard
-            label="Workers Not Cleared"
-            value={notClearedCount}
-            href="/reports/job-compliance"
-            icon={Users}
-            severity="critical"
-            note={`of ${activeWorkerCount ?? 0} active`}
-          />
+          <StatCard label="Expired Certs"      value={expiredCertCount ?? 0}  href="/reports/expired"         icon={XCircle}   severity="critical" />
+          <StatCard label="Expiring Soon"       value={expiringCertCount ?? 0} href="/reports/expiring"        icon={Clock}     severity="warning"  note="within 30 days" />
+          <StatCard label="Missing / Rejected"  value={missingCertCount}        href="/reports/missing"         icon={ShieldOff} severity="warning" />
+          <StatCard label="Pending Approval"    value={pendingCertCount ?? 0}  href="/certifications"          icon={FileCheck} severity="info" />
+          <StatCard label="Workers Not Cleared" value={notClearedCount}         href="/reports/job-compliance"  icon={Users}     severity="critical" note={`of ${activeWorkerCount ?? 0} active`} />
         </div>
       </section>
 
@@ -253,29 +252,9 @@ export default async function DashboardPage() {
       <section className="mb-8">
         <SectionHeader title="Job Hazard Analysis" linkHref="/jha" linkLabel="View all" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatCard
-            label="Open JHAs"
-            value={openJhaCount}
-            href="/jha"
-            icon={ClipboardList}
-            severity="info"
-            alertOnAny={false}
-          />
-          <StatCard
-            label="Need Signatures"
-            value={needingSigsCount}
-            href="/jha"
-            icon={PenLine}
-            severity="warning"
-          />
-          <StatCard
-            label="Completed JHAs"
-            value={completedJhaCount}
-            href="/reports/jha"
-            icon={FileText}
-            severity="good"
-            alertOnAny={false}
-          />
+          <StatCard label="Open JHAs"        value={openJhaCount}      href="/jha"         icon={ClipboardList} severity="info" alertOnAny={false} />
+          <StatCard label="Need Signatures"  value={needingSigsCount}  href="/jha"         icon={PenLine}       severity="warning" />
+          <StatCard label="Completed JHAs"   value={completedJhaCount} href="/reports/jha" icon={FileText}      severity="good" alertOnAny={false} />
         </div>
       </section>
 
@@ -283,28 +262,9 @@ export default async function DashboardPage() {
       <section className="mb-8">
         <SectionHeader title="Equipment" linkHref="/equipment" linkLabel="View all" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatCard
-            label="Failed Inspections"
-            value={failedInspCount ?? 0}
-            href="/equipment/failed"
-            icon={AlertCircle}
-            severity="warning"
-          />
-          <StatCard
-            label="Out of Service"
-            value={oosCount ?? 0}
-            href="/equipment/out-of-service"
-            icon={AlertTriangle}
-            severity="critical"
-          />
-          <StatCard
-            label="Inspections Due"
-            value={dueSoonCount ?? 0}
-            href="/equipment"
-            icon={CalendarClock}
-            severity="warning"
-            note="overdue or never inspected"
-          />
+          <StatCard label="Failed Inspections" value={failedInspCount ?? 0} href="/equipment/failed"       icon={AlertCircle}  severity="warning" />
+          <StatCard label="Out of Service"      value={oosCount ?? 0}        href="/equipment/out-of-service" icon={AlertTriangle} severity="critical" />
+          <StatCard label="Inspections Due"     value={dueSoonCount ?? 0}    href="/equipment"               icon={CalendarClock} severity="warning" note="overdue or never inspected" />
         </div>
       </section>
 
@@ -313,10 +273,10 @@ export default async function DashboardPage() {
         <SectionHeader title="Quick Actions" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: 'Add Worker',         href: '/workers/new',    icon: Users },
-            { label: 'New JHA',            href: '/jha/new',        icon: ClipboardList },
-            { label: 'Inspect Equipment',  href: '/equipment',      icon: ClipboardCheck },
-            { label: 'Reports',            href: '/reports',        icon: FileText },
+            { label: 'Add Worker',        href: '/workers/new', icon: Users },
+            { label: 'New JHA',           href: '/jha/new',     icon: ClipboardList },
+            { label: 'Inspect Equipment', href: '/equipment',   icon: ClipboardCheck },
+            { label: 'Reports',           href: '/reports',     icon: FileText },
           ].map((a) => (
             <Link
               key={a.href}

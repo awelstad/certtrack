@@ -21,6 +21,7 @@ import {
   HelpCircle,
   Building2,
 } from 'lucide-react'
+import { JobFilterSelect } from './JobFilterSelect'
 
 type NavItem = {
   href: string
@@ -54,9 +55,11 @@ type Props = {
     avatar_url: string | null
     is_platform_admin: boolean
   }
+  jobs: { id: string; name: string }[]
+  selectedJobId: string | null
 }
 
-export function Sidebar({ profile }: Props) {
+export function Sidebar({ profile, jobs, selectedJobId }: Props) {
   const pathname = usePathname()
   const isAdmin = adminRoles.includes(profile.role)
 
@@ -74,6 +77,13 @@ export function Sidebar({ profile }: Props) {
         </div>
         <span className="text-base font-bold text-white tracking-tight">CertTrack</span>
       </div>
+
+      {/* Job filter */}
+      {jobs.length > 0 && (
+        <div className="border-b border-slate-800 px-3 py-2.5">
+          <JobFilterSelect jobs={jobs} selectedJobId={selectedJobId} variant="dark" />
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-4">
