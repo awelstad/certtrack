@@ -1,4 +1,5 @@
 import { headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -16,12 +17,40 @@ export default async function WorkerBadgesPage() {
     .eq('id', user.id)
     .single()
 
-  const { data: workers } = await supabase
-    .from('workers')
-    .select('id, public_id, first_name, last_name, trade, employer, status')
-    .eq('organization_id', profile!.organization_id)
-    .eq('status', 'active')
-    .order('last_name')
+  const orgId = profile!.organization_id
+  const cookieStore = await cookies()
+  const selectedJobId = cookieStore.get('selected_job_id')?.value ?? null
+
+  let scopedWorkerIds: string[] | null = null
+  let selectedJobName: string | null = null
+
+  if (selectedJobId) {
+    const [{ data: jobWorkers }, { data: jobRow }] = await Promise.all([
+      supabase.from('job_workers').select('worker_id').eq('job_id', selectedJobId),
+      supabase.from('jobs').select('name').eq('id', selectedJobId).single(),
+    ])
+    scopedWorkerIds = (jobWorkers ?? []).map((jw) => jw.worker_id)
+    selectedJobName = jobRow?.name ?? null
+  }
+
+  let workers: { id: string; public_id: string; first_name: string; last_name: string; trade: string | null; employer: string | null; status: string }[] = []
+
+  if (scopedWorkerIds !== null && scopedWorkerIds.length === 0) {
+    workers = []
+  } else {
+    const query = supabase
+      .from('workers')
+      .select('id, public_id, first_name, last_name, trade, employer, status')
+      .eq('organization_id', orgId)
+      .eq('status', 'active')
+      .order('last_name')
+
+    const { data } = scopedWorkerIds
+      ? await query.in('id', scopedWorkerIds)
+      : await query
+
+    workers = data ?? []
+  }
 
   const headersList = await headers()
   const host = headersList.get('host') ?? 'localhost:3000'
@@ -36,11 +65,13 @@ export default async function WorkerBadgesPage() {
       <div className="mb-6 print:hidden">
         <h1 className="text-2xl font-bold text-slate-900">Print Badges</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Select workers, then click Print. Each badge includes a QR code linked to their live certification profile.
+          {selectedJobName
+            ? `Showing workers assigned to ${selectedJobName}.`
+            : 'Select workers, then click Print. Each badge includes a QR code linked to their live certification profile.'}
         </p>
       </div>
 
-      <BulkBadgePrint workers={workers ?? []} host={host} />
+      <BulkBadgePrint workers={workers} host={host} />
     </div>
   )
 }
