@@ -6,7 +6,8 @@ import { Pagination } from '@/components/ui/Pagination'
 import { WorkerCard } from '@/components/workers/WorkerCard'
 import { createClient } from '@/lib/supabase/server'
 import { calculateWorkerOverallStatus } from '@/lib/certifications'
-import { Users, Plus, Printer, Upload } from 'lucide-react'
+import { PrintMenu } from '@/components/workers/PrintMenu'
+import { Users, Plus, Upload } from 'lucide-react'
 import type { WorkerStatus, CertStatus } from '@/lib/types'
 
 const PAGE_SIZE = 50
@@ -95,13 +96,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
         description={description}
         action={
           <div className="flex gap-2">
-            <Link
-              href="/workers/badges"
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 sm:px-4"
-            >
-              <Printer className="h-4 w-4" />
-              <span className="hidden sm:inline">Print Badges</span>
-            </Link>
+            <PrintMenu />
             <Link
               href="/workers/import"
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 sm:px-4"
