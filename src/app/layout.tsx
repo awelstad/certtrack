@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist } from 'next/font/google'
+import { PwaInit } from '@/components/PwaInit'
 import './globals.css'
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
@@ -19,7 +20,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geist.variable} h-full`}>
-      <body className="h-full antialiased">{children}</body>
+      <body className="h-full antialiased">
+        <PwaInit />
+        {children}
+      </body>
     </html>
   )
 }

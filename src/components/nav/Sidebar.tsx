@@ -20,6 +20,7 @@ import {
   HelpCircle,
   Building2,
   ShieldCheck,
+  Smartphone,
 } from 'lucide-react'
 import { JobFilterSelect } from './JobFilterSelect'
 import { OrgSwitcher } from './OrgSwitcher'
@@ -46,7 +47,8 @@ const navItems: NavItem[] = [
 ]
 
 const adminItems: NavItem[] = [
-  { href: '/admin/branding', label: 'Branding', icon: Settings, adminOnly: true },
+  { href: '/admin/branding', label: 'Settings', icon: Settings, adminOnly: true },
+  { href: '/admin/install', label: 'Install App', icon: Smartphone, adminOnly: true },
 ]
 
 const adminRoles: Role[] = ['owner', 'admin']

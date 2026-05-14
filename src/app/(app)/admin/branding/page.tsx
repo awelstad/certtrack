@@ -27,7 +27,7 @@ export default async function AdminBrandingPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <PageHeader
-        title="Branding"
+        title="Settings"
         description="Customize your organization's logo, name, and brand color."
       />
       <BrandingForm
