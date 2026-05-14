@@ -1,7 +1,15 @@
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ClearworkMark } from '@/components/ui/ClearworkMark'
-import { Wrench, CheckCircle2, AlertTriangle, Clock, Calendar } from 'lucide-react'
+import { Wrench, CheckCircle2, AlertTriangle, Clock, Calendar, CheckCircle, XCircle, MinusCircle } from 'lucide-react'
+
+type ChecklistItem = {
+  id: string
+  label: string
+  is_critical: boolean
+  result: 'pass' | 'fail' | 'na' | null
+  note?: string | null
+}
 
 const STATUS_CONFIG = {
   active: {
@@ -55,7 +63,7 @@ export default async function PublicEquipmentPage({ params }: { params: Promise<
 
   const { data: inspections } = await admin
     .from('equipment_inspections')
-    .select('id, inspection_date, status, inspector_name, created_at')
+    .select('id, inspection_date, status, inspector_name, created_at, results')
     .eq('equipment_id', equipment.id)
     .order('created_at', { ascending: false })
     .limit(5)
@@ -143,36 +151,92 @@ export default async function PublicEquipmentPage({ params }: { params: Promise<
           )}
         </div>
 
-        {/* Recent inspection history */}
+        {/* Inspection history with full checklist */}
         {inspections && inspections.length > 0 && (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-5 py-3">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Calendar className="h-4 w-4 text-slate-400" />
-                Recent Inspections
-              </h2>
-            </div>
-            <ul className="divide-y divide-slate-100">
-              {inspections.map(ins => (
-                <li key={ins.id} className="flex items-center justify-between px-5 py-3 text-sm">
-                  <div>
-                    <p className="font-medium text-slate-900">
-                      {new Date(ins.inspection_date).toLocaleDateString()}
-                    </p>
-                    {ins.inspector_name && <p className="text-xs text-slate-500">{ins.inspector_name}</p>}
+          <div className="space-y-4">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <Calendar className="h-4 w-4 text-slate-400" />
+              Recent Inspections
+            </h2>
+            {inspections.map((ins) => {
+              const items = (ins.results ?? []) as ChecklistItem[]
+              const fails = items.filter((i) => i.result === 'fail')
+              const passes = items.filter((i) => i.result === 'pass')
+              const nas = items.filter((i) => i.result === 'na')
+              return (
+                <div key={ins.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  {/* Inspection header */}
+                  <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {new Date(ins.inspection_date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                      </p>
+                      {ins.inspector_name && (
+                        <p className="text-xs text-slate-500">{ins.inspector_name}</p>
+                      )}
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      ins.status === 'passed'
+                        ? 'bg-green-100 text-green-700'
+                        : ins.status === 'failed'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {ins.status === 'passed' ? 'Passed' : ins.status === 'failed' ? 'Failed' : ins.status}
+                    </span>
                   </div>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                    ins.status === 'passed'
-                      ? 'bg-green-100 text-green-700'
-                      : ins.status === 'failed'
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {ins.status}
-                  </span>
-                </li>
-              ))}
-            </ul>
+
+                  {/* Summary counts */}
+                  {items.length > 0 && (
+                    <div className="flex divide-x divide-slate-100 border-b border-slate-100 text-center text-xs">
+                      <div className="flex-1 py-2">
+                        <p className="font-semibold text-green-700">{passes.length}</p>
+                        <p className="text-slate-400">Pass</p>
+                      </div>
+                      <div className="flex-1 py-2">
+                        <p className="font-semibold text-red-700">{fails.length}</p>
+                        <p className="text-slate-400">Fail</p>
+                      </div>
+                      <div className="flex-1 py-2">
+                        <p className="font-semibold text-slate-500">{nas.length}</p>
+                        <p className="text-slate-400">N/A</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Checklist items */}
+                  {items.length > 0 ? (
+                    <ul className="divide-y divide-slate-100">
+                      {items.map((item) => (
+                        <li key={item.id} className="flex items-start gap-3 px-5 py-3">
+                          {item.result === 'pass' && <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />}
+                          {item.result === 'fail' && <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />}
+                          {(item.result === 'na' || item.result === null) && <MinusCircle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />}
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm ${item.result === 'fail' ? 'font-semibold text-slate-900' : 'text-slate-700'}`}>
+                              {item.label}
+                              {item.is_critical && item.result === 'fail' && (
+                                <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">CRITICAL</span>
+                              )}
+                            </p>
+                            {item.note && (
+                              <p className="mt-0.5 text-xs text-slate-500">{item.note}</p>
+                            )}
+                          </div>
+                          <span className={`shrink-0 text-xs font-medium ${
+                            item.result === 'pass' ? 'text-green-600' : item.result === 'fail' ? 'text-red-600' : 'text-slate-400'
+                          }`}>
+                            {item.result === 'pass' ? 'Pass' : item.result === 'fail' ? 'Fail' : 'N/A'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="px-5 py-3 text-sm text-slate-400">No checklist items recorded.</p>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
 

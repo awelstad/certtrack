@@ -18,13 +18,13 @@ const PRINT_STYLE = `
     body { background: white; margin: 0; }
     .sticker-grid {
       display: grid !important;
-      grid-template-columns: repeat(2, 3in) !important;
+      grid-template-columns: repeat(3, 2in) !important;
       gap: 0.25in !important;
       padding: 0 !important;
     }
     .sticker-card {
-      width: 3in !important;
-      height: 3in !important;
+      width: 2in !important;
+      height: 2in !important;
       break-inside: avoid !important;
       page-break-inside: avoid !important;
       overflow: hidden !important;
@@ -114,7 +114,7 @@ export function EquipmentQrPrint({ equipment, host }: { equipment: Equipment[]; 
       <div className="sticker-grid hidden print:grid">
         {toPrint.map((e) => {
           const eqUrl = `https://${host}/eq/${e.public_id}`
-          const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(eqUrl)}&margin=4&color=0f172a`
+          const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(eqUrl)}&margin=4&color=0f172a`
           return (
             <div
               key={e.id}
@@ -127,7 +127,7 @@ export function EquipmentQrPrint({ equipment, host }: { equipment: Equipment[]; 
                 </p>
               )}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrSrc} alt="QR" width={180} height={180} className="rounded" />
+              <img src={qrSrc} alt="QR" width={120} height={120} className="rounded" />
               {e.company_asset_number && (
                 <p className="text-[9px] font-medium text-slate-500">Asset #{e.company_asset_number}</p>
               )}

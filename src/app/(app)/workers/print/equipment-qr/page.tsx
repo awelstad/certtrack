@@ -49,8 +49,8 @@ export default async function EquipmentQrPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center gap-3 print:hidden">
-        <Link href="/workers" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900">
-          <ArrowLeft className="h-4 w-4" /> Workers
+        <Link href="/equipment" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900">
+          <ArrowLeft className="h-4 w-4" /> Equipment
         </Link>
       </div>
       <div className="mb-6 print:hidden">
@@ -58,7 +58,7 @@ export default async function EquipmentQrPage() {
         <p className="mt-1 text-sm text-slate-500">
           {selectedJobName
             ? `Showing equipment on ${selectedJobName}.`
-            : '3″ × 3″ Avery labels — select equipment, then click Print. Each label includes a QR code linked to the equipment record.'}
+            : '2″ × 2″ labels, 9 per sheet — select equipment, then click Print. Each label includes a QR code linked to the equipment record.'}
         </p>
       </div>
 

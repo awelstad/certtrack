@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Pagination } from '@/components/ui/Pagination'
 import { EquipmentStatusBadge } from '@/components/equipment/EquipmentStatusBadge'
-import { Wrench, ChevronRight, Plus, AlertTriangle, ClipboardList } from 'lucide-react'
+import { Wrench, ChevronRight, Plus, AlertTriangle, ClipboardList, Printer } from 'lucide-react'
 import type { Role } from '@/lib/types'
 
 const MANAGER_ROLES: Role[] = ['owner', 'admin', 'pm', 'superintendent']
@@ -75,6 +75,13 @@ export default async function EquipmentPage({ searchParams }: { searchParams: Pr
                 <span className="hidden sm:inline">Templates</span>
               </Link>
             )}
+            <Link
+              href="/workers/print/equipment-qr"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 sm:px-4"
+            >
+              <Printer className="h-4 w-4" />
+              <span className="hidden sm:inline">Print QR Labels</span>
+            </Link>
             <Link
               href="/equipment/new"
               className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 sm:px-4"
