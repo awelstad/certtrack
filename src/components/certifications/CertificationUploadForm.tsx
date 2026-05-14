@@ -1,8 +1,8 @@
 'use client'
 
 import { useActionState, useState, useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { saveCert } from '@/app/actions/certifications'
+import { uploadCertDoc } from '@/app/actions/uploadCertDoc'
 import { extractCertData } from '@/app/actions/extractCert'
 import { Upload, X, CheckCircle2, Loader2, Sparkles } from 'lucide-react'
 
@@ -42,13 +42,14 @@ export function CertificationUploadForm({ workerId, orgId, certTypes, onClose }:
     setDocumentPath('')
     setAiDetected({ issueDate: false, expiryDate: false, certName: false })
 
-    // Upload to storage
-    const supabase = createClient()
-    const ext = file.name.split('.').pop() ?? 'bin'
-    const path = `${orgId}/${workerId}/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('cert-documents').upload(path, file)
-    if (error) {
-      setUploadError(error.message)
+    // Upload to storage via server action (uses admin client to bypass RLS)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('orgId', orgId)
+    fd.append('workerId', workerId)
+    const { path, error } = await uploadCertDoc(fd)
+    if (error || !path) {
+      setUploadError(error ?? 'Upload failed')
       setUploading(false)
       return
     }
