@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { certExpiryLabel } from '@/lib/types'
 import { calculateWorkerOverallStatus } from '@/lib/certifications'
 import { BrandingHeader } from '@/components/ui/BrandingHeader'
-import { ShieldCheck, ShieldAlert, ShieldX, Clock } from 'lucide-react'
+import { ShieldCheck, ShieldAlert, ShieldX, Clock, FileText } from 'lucide-react'
 import type { CertStatus } from '@/lib/types'
 
 export default async function QrWorkerPage({
@@ -31,7 +32,7 @@ export default async function QrWorkerPage({
 
   const { data: allCerts } = await supabase
     .from('worker_certifications')
-    .select('id, expiry_date, status, certification_types(name)')
+    .select('id, expiry_date, status, document_url, certification_types(name)')
     .eq('worker_id', worker.id)
     .order('expiry_date', { ascending: true })
 
@@ -40,6 +41,20 @@ export default async function QrWorkerPage({
   )
 
   const approvedCerts = (allCerts ?? []).filter((c) => c.status === 'approved')
+
+  // Generate signed URLs for approved certs that have documents
+  const admin = createAdminClient()
+  const signedUrls: Record<string, string | null> = {}
+  await Promise.all(
+    approvedCerts
+      .filter((c) => c.document_url)
+      .map(async (c) => {
+        const { data } = await admin.storage
+          .from('cert-documents')
+          .createSignedUrl(c.document_url!, 3600)
+        signedUrls[c.id] = data?.signedUrl ?? null
+      })
+  )
 
   // Log the QR scan (best-effort)
   const headersList = await headers()
@@ -155,17 +170,30 @@ export default async function QrWorkerPage({
                 return (
                   <li key={c.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
                     <p className="text-sm font-medium text-slate-900">{ct?.name ?? '—'}</p>
-                    <span
-                      className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                        expiry.color === 'green'
-                          ? 'border-green-200 bg-green-50 text-green-700'
-                          : expiry.color === 'yellow'
-                          ? 'border-yellow-200 bg-yellow-50 text-yellow-700'
-                          : 'border-red-200 bg-red-50 text-red-700'
-                      }`}
-                    >
-                      {expiry.label}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {signedUrls[c.id] && (
+                        <a
+                          href={signedUrls[c.id]!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          <FileText className="h-3 w-3" />
+                          View
+                        </a>
+                      )}
+                      <span
+                        className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                          expiry.color === 'green'
+                            ? 'border-green-200 bg-green-50 text-green-700'
+                            : expiry.color === 'yellow'
+                            ? 'border-yellow-200 bg-yellow-50 text-yellow-700'
+                            : 'border-red-200 bg-red-50 text-red-700'
+                        }`}
+                      >
+                        {expiry.label}
+                      </span>
+                    </div>
                   </li>
                 )
               })}
