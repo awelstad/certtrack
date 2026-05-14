@@ -10,10 +10,8 @@ import {
   Users,
   Award,
   Briefcase,
-  BookOpen,
   AlertTriangle,
   Wrench,
-  BarChart2,
   Settings,
   LogOut,
   ChevronRight,
@@ -38,11 +36,9 @@ const navItems: NavItem[] = [
   { href: '/workers', label: 'Workers', icon: Users },
   { href: '/certifications', label: 'Certifications', icon: Award },
   { href: '/jobs', label: 'Jobs', icon: Briefcase },
-  { href: '/orientations', label: 'Orientations', icon: BookOpen },
   { href: '/jha', label: 'JHA', icon: AlertTriangle },
   { href: '/equipment', label: 'Equipment', icon: Wrench },
   { href: '/toolbox', label: 'Toolbox Talks', icon: ShieldCheck },
-  { href: '/reports', label: 'Reports', icon: BarChart2 },
   { href: '/help', label: 'Help & Guide', icon: HelpCircle },
 ]
 
