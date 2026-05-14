@@ -166,11 +166,13 @@ export function getMissingJobRequirements(
 // Generates a Supabase Storage signed URL for a private cert document.
 // Signed URLs expire after 1 hour.
 export async function generateSignedDocumentUrl(
-  supabase: Awaited<ReturnType<typeof import('@/lib/supabase/server').createClient>>,
+  _supabase: unknown,
   path: string
 ): Promise<string | null> {
   if (!path) return null
-  const { data } = await supabase.storage
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = createAdminClient()
+  const { data } = await admin.storage
     .from('cert-documents')
     .createSignedUrl(path, 3600)
   return data?.signedUrl ?? null
