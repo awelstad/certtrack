@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { LogOut, Settings } from 'lucide-react'
+import { LogOut, Settings, Smartphone } from 'lucide-react'
 import type { Role } from '@/lib/types'
 import { JobFilterSelect } from './JobFilterSelect'
 import { ClearworkMark } from '@/components/ui/ClearworkMark'
@@ -82,14 +82,24 @@ export function TopBar({ profile, jobs, selectedJobId, org }: Props) {
               </div>
 
               {isAdmin && (
-                <Link
-                  href="/admin/branding"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
-                >
-                  <Settings className="h-4 w-4 text-slate-400" />
-                  Settings
-                </Link>
+                <>
+                  <Link
+                    href="/admin/branding"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  >
+                    <Settings className="h-4 w-4 text-slate-400" />
+                    Settings
+                  </Link>
+                  <Link
+                    href="/admin/install"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  >
+                    <Smartphone className="h-4 w-4 text-slate-400" />
+                    Install App
+                  </Link>
+                </>
               )}
 
               <form action={signOut}>
