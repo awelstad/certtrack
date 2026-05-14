@@ -4,9 +4,12 @@
 -- ============================================================
 
 -- ── Standard Certification Types ──────────────────────────
--- Only inserts if a cert type with that name doesn't already exist.
-INSERT INTO certification_types (name, description)
-SELECT name, description FROM (VALUES
+-- Inserts standard cert types into every existing organization.
+-- Skips any name that already exists for that org.
+INSERT INTO certification_types (organization_id, name, description)
+SELECT o.id, t.name, t.description
+FROM organizations o
+CROSS JOIN (VALUES
   ('OSHA 10-Hour Construction',         'OSHA 10-hour construction safety outreach training card'),
   ('OSHA 30-Hour Construction',         'OSHA 30-hour construction safety outreach training card'),
   ('First Aid / CPR',                   'First Aid and CPR certification'),
@@ -21,10 +24,11 @@ SELECT name, description FROM (VALUES
   ('Hazmat / HAZWOPER',                 'Hazardous materials or HAZWOPER 40-hour certification'),
   ('Flagging / Traffic Control',        'Flagger and traffic control safety certification'),
   ('Powder-Actuated Tool Operator',     'Powder-actuated fastening tool operator (e.g. Hilti, Ramset)'),
-  ('Electrical Safety / NFPA 70E',     'Electrical safety awareness per NFPA 70E')
+  ('Electrical Safety / NFPA 70E',      'Electrical safety awareness per NFPA 70E')
 ) AS t(name, description)
 WHERE NOT EXISTS (
-  SELECT 1 FROM certification_types ct WHERE ct.name = t.name
+  SELECT 1 FROM certification_types ct
+  WHERE ct.organization_id = o.id AND ct.name = t.name
 );
 
 -- ── Standard Toolbox Talk Templates ───────────────────────
@@ -78,7 +82,7 @@ Is everyone wearing their required PPE today? Are there tasks coming up this wee
   'Struck-By / Overhead Safety',
   'Good morning. Today we are discussing struck-by hazards — the second leading cause of construction fatalities.
 
-FOUR TYPES OF STRUCK-BY HAZARDS:
+THE FOUR TYPES OF STRUCK-BY HAZARDS:
 1. Flying objects: fragments from grinders, nail guns, or power tools.
 2. Falling objects: tools or materials dropped from heights above.
 3. Swinging/rolling equipment: blind spots on excavators, cranes, and trucks.
