@@ -9,11 +9,12 @@ import { calculateWorkerOverallStatus } from '@/lib/certifications'
 import { PrintMenu } from '@/components/workers/PrintMenu'
 import { Users, Plus, Upload } from 'lucide-react'
 import type { WorkerStatus, CertStatus } from '@/lib/types'
+import { WorkersFilterBar } from '@/components/workers/WorkersFilterBar'
 
 const PAGE_SIZE = 50
 
-export default async function WorkersPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  const { page: pageParam } = await searchParams
+export default async function WorkersPage({ searchParams }: { searchParams: Promise<{ page?: string; search?: string; status?: string }> }) {
+  const { page: pageParam, search = '', status = '' } = await searchParams
   const page = Math.max(1, parseInt(pageParam ?? '1', 10))
 
   const supabase = await createClient()
@@ -53,16 +54,21 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
     const from = (page - 1) * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
 
-    const query = supabase
+    let query = supabase
       .from('workers')
       .select('id, first_name, last_name, trade, employer, status, avatar_url', { count: 'exact' })
       .eq('organization_id', orgId)
       .order('last_name')
       .range(from, to)
 
-    const { data, count } = scopedWorkerIds
-      ? await query.in('id', scopedWorkerIds)
-      : await query
+    if (scopedWorkerIds) query = query.in('id', scopedWorkerIds)
+    if (status) query = query.eq('status', status)
+    if (search) {
+      const q = `%${search}%`
+      query = query.or(`first_name.ilike.${q},last_name.ilike.${q},trade.ilike.${q},employer.ilike.${q}`)
+    }
+
+    const { data, count } = await query
 
     workers = (data ?? []) as Worker[]
     total = count ?? 0
@@ -115,12 +121,16 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
         }
       />
 
+      <WorkersFilterBar initialSearch={search} initialStatus={status} />
+
       {!workers.length ? (
         <EmptyState
           icon={Users}
-          title={selectedJobName ? `No workers on ${selectedJobName}` : 'No workers yet'}
+          title={search || status ? 'No workers match your search' : selectedJobName ? `No workers on ${selectedJobName}` : 'No workers yet'}
           description={
-            selectedJobName
+            search || status
+              ? 'Try adjusting your search or filter.'
+              : selectedJobName
               ? 'No workers are currently assigned to this job.'
               : 'Add your first worker to get started tracking certifications and compliance.'
           }
