@@ -18,34 +18,56 @@ export default async function PublicInspectPage({ params }: { params: Promise<{ 
 
   if (!equipment) notFound()
 
+  // Read assigned template — column added in migration 015; fall back gracefully
+  let assignedTemplateId: string | null = null
+  try {
+    const { data: tRow } = await admin
+      .from('equipment')
+      .select('inspection_template_id')
+      .eq('public_id', publicId)
+      .single()
+    assignedTemplateId = (tRow as { inspection_template_id?: string | null })?.inspection_template_id ?? null
+  } catch { /* migration 015 not yet run */ }
+
   const { data: org } = await admin
     .from('organizations')
     .select('name, logo_url, brand_color')
     .eq('id', equipment.organization_id)
     .single()
 
-  // Fetch system templates + org templates for this equipment type
-  const typeId = equipment.equipment_type_id
-  const [{ data: systemTemplates }, { data: orgTemplates }] = await Promise.all([
-    admin
-      .from('equipment_inspection_templates')
-      .select('id, title, checklist_items')
-      .is('organization_id', null)
-      .or(typeId ? `equipment_type_id.is.null,equipment_type_id.eq.${typeId}` : 'equipment_type_id.is.null')
-      .order('title'),
-    admin
-      .from('equipment_inspection_templates')
-      .select('id, title, checklist_items')
-      .eq('organization_id', equipment.organization_id)
-      .or(typeId ? `equipment_type_id.is.null,equipment_type_id.eq.${typeId}` : 'equipment_type_id.is.null')
-      .order('title'),
-  ])
+  let templates: { id: string; title: string; checklist_items: ReturnType<typeof parseChecklistTemplate> }[]
 
-  const templates = [...(systemTemplates ?? []), ...(orgTemplates ?? [])].map((t) => ({
-    id: t.id,
-    title: t.title,
-    checklist_items: parseChecklistTemplate(t.checklist_items),
-  }))
+  if (assignedTemplateId) {
+    // Use only the assigned template
+    const { data: t } = await admin
+      .from('equipment_inspection_templates')
+      .select('id, title, checklist_items')
+      .eq('id', assignedTemplateId)
+      .single()
+    templates = t ? [{ id: t.id, title: t.title, checklist_items: parseChecklistTemplate(t.checklist_items) }] : []
+  } else {
+    // Fall back to all type-matched templates
+    const typeId = equipment.equipment_type_id
+    const [{ data: systemTemplates }, { data: orgTemplates }] = await Promise.all([
+      admin
+        .from('equipment_inspection_templates')
+        .select('id, title, checklist_items')
+        .is('organization_id', null)
+        .or(typeId ? `equipment_type_id.is.null,equipment_type_id.eq.${typeId}` : 'equipment_type_id.is.null')
+        .order('title'),
+      admin
+        .from('equipment_inspection_templates')
+        .select('id, title, checklist_items')
+        .eq('organization_id', equipment.organization_id)
+        .or(typeId ? `equipment_type_id.is.null,equipment_type_id.eq.${typeId}` : 'equipment_type_id.is.null')
+        .order('title'),
+    ])
+    templates = [...(systemTemplates ?? []), ...(orgTemplates ?? [])].map((t) => ({
+      id: t.id,
+      title: t.title,
+      checklist_items: parseChecklistTemplate(t.checklist_items),
+    }))
+  }
 
   const brandColor = org?.brand_color ?? '#0f172a'
   const eqType = equipment.equipment_types as unknown as { name: string } | null

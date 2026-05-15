@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { EquipmentStatusBadge } from '@/components/equipment/EquipmentStatusBadge'
 import { EquipmentInspectForm } from '@/components/equipment/EquipmentInspectForm'
 import { parseChecklistTemplate } from '@/lib/equipment'
@@ -26,27 +27,54 @@ export default async function EquipmentInspectPage({ params }: { params: Promise
 
   if (!equipment) notFound()
 
-  // Fetch system templates + org templates, filtered by type where set
-  const [{ data: systemTemplates }, { data: orgTemplates }] = await Promise.all([
-    supabase
-      .from('equipment_inspection_templates')
-      .select('id, title, checklist_items, equipment_type_id')
-      .is('organization_id', null)
-      .or(`equipment_type_id.is.null,equipment_type_id.eq.${equipment.equipment_type_id ?? 'null'}`)
-      .order('title'),
-    supabase
-      .from('equipment_inspection_templates')
-      .select('id, title, checklist_items, equipment_type_id')
-      .eq('organization_id', profile!.organization_id)
-      .or(`equipment_type_id.is.null,equipment_type_id.eq.${equipment.equipment_type_id ?? 'null'}`)
-      .order('title'),
-  ])
+  // Read assigned template — column added in migration 015; fall back gracefully
+  let assignedTemplateId: string | null = null
+  try {
+    const { data: tRow } = await supabase
+      .from('equipment')
+      .select('inspection_template_id')
+      .eq('id', id)
+      .single()
+    assignedTemplateId = (tRow as { inspection_template_id?: string | null })?.inspection_template_id ?? null
+  } catch { /* migration 015 not yet run */ }
 
-  const templates = [...(systemTemplates ?? []), ...(orgTemplates ?? [])].map((t) => ({
-    id: t.id,
-    title: t.title,
-    checklist_items: parseChecklistTemplate(t.checklist_items),
-  }))
+  let templates: { id: string; title: string; checklist_items: ReturnType<typeof parseChecklistTemplate> }[]
+
+  const admin = createAdminClient()
+  if (assignedTemplateId) {
+    // Use only the assigned template — admin bypasses RLS for system templates
+    const { data: t } = await admin
+      .from('equipment_inspection_templates')
+      .select('id, title, checklist_items')
+      .eq('id', assignedTemplateId)
+      .single()
+    templates = t ? [{ id: t.id, title: t.title, checklist_items: parseChecklistTemplate(t.checklist_items) }] : []
+  } else {
+    // Fall back to type-matched templates (system + org)
+    const typeId = equipment.equipment_type_id
+    const typeFilter = typeId
+      ? `equipment_type_id.is.null,equipment_type_id.eq.${typeId}`
+      : 'equipment_type_id.is.null'
+    const [{ data: sysTemplates }, { data: orgTemplates }] = await Promise.all([
+      admin
+        .from('equipment_inspection_templates')
+        .select('id, title, checklist_items')
+        .is('organization_id', null)
+        .or(typeFilter)
+        .order('title'),
+      supabase
+        .from('equipment_inspection_templates')
+        .select('id, title, checklist_items')
+        .eq('organization_id', profile!.organization_id)
+        .or(typeFilter)
+        .order('title'),
+    ])
+    templates = [...(sysTemplates ?? []), ...(orgTemplates ?? [])].map((t) => ({
+      id: t.id,
+      title: t.title,
+      checklist_items: parseChecklistTemplate(t.checklist_items),
+    }))
+  }
 
   const eqType = equipment.equipment_types as unknown as { name: string } | null
 

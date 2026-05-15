@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EquipmentEditForm } from './EquipmentEditForm'
 import { ArrowLeft } from 'lucide-react'
@@ -28,13 +29,28 @@ export default async function EquipmentEditPage({ params }: { params: Promise<{ 
     .eq('organization_id', profile.organization_id)
     .single()
 
+  // Read inspection_template_id separately — column added in migration 015
+  let inspectionTemplateId = ''
+  try {
+    const { data: tRow } = await supabase
+      .from('equipment')
+      .select('inspection_template_id')
+      .eq('id', id)
+      .single()
+    inspectionTemplateId = (tRow as { inspection_template_id?: string | null })?.inspection_template_id ?? ''
+  } catch { /* column not yet migrated */ }
+
   if (!equipment) notFound()
 
-  const [{ data: equipmentTypes }, { data: jobs }, { data: workers }] = await Promise.all([
+  const admin = createAdminClient()
+  const [{ data: equipmentTypes }, { data: jobs }, { data: workers }, { data: systemTemplates }, { data: orgTemplates }] = await Promise.all([
     supabase.from('equipment_types').select('id, name, category').order('category').order('name'),
     supabase.from('jobs').select('id, name').eq('organization_id', profile.organization_id).eq('status', 'active').order('name'),
     supabase.from('workers').select('id, first_name, last_name').eq('organization_id', profile.organization_id).eq('status', 'active').order('last_name'),
+    admin.from('equipment_inspection_templates').select('id, title').is('organization_id', null).order('title'),
+    supabase.from('equipment_inspection_templates').select('id, title').eq('organization_id', profile.organization_id).order('title'),
   ])
+  const inspectionTemplates = [...(systemTemplates ?? []), ...(orgTemplates ?? [])]
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -51,19 +67,21 @@ export default async function EquipmentEditPage({ params }: { params: Promise<{ 
           equipmentTypes={equipmentTypes ?? []}
           jobs={jobs ?? []}
           workers={workers ?? []}
+          inspectionTemplates={inspectionTemplates}
           initialValues={{
-            name:               equipment.name,
-            equipmentTypeId:    equipment.equipment_type_id ?? '',
-            make:               equipment.make ?? '',
-            model:              equipment.model ?? '',
-            serialNumber:       equipment.serial_number ?? '',
-            companyAssetNumber: equipment.company_asset_number ?? '',
-            year:               equipment.year?.toString() ?? '',
-            jobId:              equipment.job_id ?? '',
-            assignedWorkerId:   equipment.assigned_worker_id ?? '',
-            photoUrl:           equipment.photo_url ?? '',
-            notes:              equipment.notes ?? '',
-            status:             equipment.status,
+            name:                 equipment.name,
+            equipmentTypeId:      equipment.equipment_type_id ?? '',
+            make:                 equipment.make ?? '',
+            model:                equipment.model ?? '',
+            serialNumber:         equipment.serial_number ?? '',
+            companyAssetNumber:   equipment.company_asset_number ?? '',
+            year:                 equipment.year?.toString() ?? '',
+            jobId:                equipment.job_id ?? '',
+            assignedWorkerId:     equipment.assigned_worker_id ?? '',
+            inspectionTemplateId: inspectionTemplateId,
+            photoUrl:             equipment.photo_url ?? '',
+            notes:                equipment.notes ?? '',
+            status:               equipment.status,
           }}
         />
       </div>

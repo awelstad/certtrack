@@ -54,19 +54,20 @@ export async function createEquipment(
   if (!name) return { error: 'Name is required' }
 
   const payload = {
-    organization_id:      profile.organization_id,
+    organization_id:        profile.organization_id,
     name,
-    equipment_type_id:    (formData.get('equipment_type_id') as string) || null,
-    make:                 (formData.get('make') as string)?.trim() || null,
-    model:                (formData.get('model') as string)?.trim() || null,
-    serial_number:        (formData.get('serial_number') as string)?.trim() || null,
-    company_asset_number: (formData.get('company_asset_number') as string)?.trim() || null,
-    year:                 formData.get('year') ? Number(formData.get('year')) : null,
-    job_id:               (formData.get('job_id') as string) || null,
-    assigned_worker_id:   (formData.get('assigned_worker_id') as string) || null,
-    photo_url:            (formData.get('photo_url') as string)?.trim() || null,
-    notes:                (formData.get('notes') as string)?.trim() || null,
-    status:               'active' as const,
+    equipment_type_id:      (formData.get('equipment_type_id') as string) || null,
+    make:                   (formData.get('make') as string)?.trim() || null,
+    model:                  (formData.get('model') as string)?.trim() || null,
+    serial_number:          (formData.get('serial_number') as string)?.trim() || null,
+    company_asset_number:   (formData.get('company_asset_number') as string)?.trim() || null,
+    year:                   formData.get('year') ? Number(formData.get('year')) : null,
+    job_id:                 (formData.get('job_id') as string) || null,
+    assigned_worker_id:     (formData.get('assigned_worker_id') as string) || null,
+    inspection_template_id: (formData.get('inspection_template_id') as string) || null,
+    photo_url:              (formData.get('photo_url') as string)?.trim() || null,
+    notes:                  (formData.get('notes') as string)?.trim() || null,
+    status:                 'active' as const,
   }
 
   const { data, error } = await supabase.from('equipment').insert(payload).select('id').single()
@@ -102,18 +103,19 @@ export async function updateEquipment(
     .from('equipment')
     .update({
       name,
-      equipment_type_id:    (formData.get('equipment_type_id') as string) || null,
-      make:                 (formData.get('make') as string)?.trim() || null,
-      model:                (formData.get('model') as string)?.trim() || null,
-      serial_number:        (formData.get('serial_number') as string)?.trim() || null,
-      company_asset_number: (formData.get('company_asset_number') as string)?.trim() || null,
-      year:                 formData.get('year') ? Number(formData.get('year')) : null,
-      job_id:               (formData.get('job_id') as string) || null,
-      assigned_worker_id:   (formData.get('assigned_worker_id') as string) || null,
-      photo_url:            (formData.get('photo_url') as string)?.trim() || null,
-      notes:                (formData.get('notes') as string)?.trim() || null,
-      status:               (formData.get('status') as string) || 'active',
-      updated_at:           new Date().toISOString(),
+      equipment_type_id:      (formData.get('equipment_type_id') as string) || null,
+      make:                   (formData.get('make') as string)?.trim() || null,
+      model:                  (formData.get('model') as string)?.trim() || null,
+      serial_number:          (formData.get('serial_number') as string)?.trim() || null,
+      company_asset_number:   (formData.get('company_asset_number') as string)?.trim() || null,
+      year:                   formData.get('year') ? Number(formData.get('year')) : null,
+      job_id:                 (formData.get('job_id') as string) || null,
+      assigned_worker_id:     (formData.get('assigned_worker_id') as string) || null,
+      inspection_template_id: (formData.get('inspection_template_id') as string) || null,
+      photo_url:              (formData.get('photo_url') as string)?.trim() || null,
+      notes:                  (formData.get('notes') as string)?.trim() || null,
+      status:                 (formData.get('status') as string) || 'active',
+      updated_at:             new Date().toISOString(),
     })
     .eq('id', equipmentId)
     .eq('organization_id', profile.organization_id)

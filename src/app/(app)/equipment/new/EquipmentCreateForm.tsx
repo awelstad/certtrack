@@ -9,13 +9,16 @@ interface EquipmentType { id: string; name: string; category: string }
 interface Job { id: string; name: string }
 interface Worker { id: string; first_name: string; last_name: string }
 
+interface InspectionTemplate { id: string; title: string }
+
 interface Props {
   equipmentTypes: EquipmentType[]
   jobs: Job[]
   workers: Worker[]
+  inspectionTemplates: InspectionTemplate[]
 }
 
-export function EquipmentCreateForm({ equipmentTypes, jobs, workers }: Props) {
+export function EquipmentCreateForm({ equipmentTypes, jobs, workers, inspectionTemplates }: Props) {
   const router = useRouter()
   const [state, formAction, pending] = useActionState(createEquipment, null)
 
@@ -31,6 +34,7 @@ export function EquipmentCreateForm({ equipmentTypes, jobs, workers }: Props) {
       equipmentTypes={equipmentTypes}
       jobs={jobs}
       workers={workers}
+      inspectionTemplates={inspectionTemplates}
     />
   )
 }

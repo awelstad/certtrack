@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react'
 interface EquipmentType { id: string; name: string; category: string }
 interface Job { id: string; name: string }
 interface Worker { id: string; first_name: string; last_name: string }
+interface InspectionTemplate { id: string; title: string }
 
 interface InitialValues {
   name: string
@@ -17,6 +18,7 @@ interface InitialValues {
   year: string
   jobId: string
   assignedWorkerId: string
+  inspectionTemplateId: string
   photoUrl: string
   notes: string
   status: string
@@ -29,6 +31,7 @@ interface Props {
   equipmentTypes: EquipmentType[]
   jobs: Job[]
   workers: Worker[]
+  inspectionTemplates: InspectionTemplate[]
   equipmentId?: string
   initialValues?: Partial<InitialValues>
 }
@@ -47,6 +50,7 @@ export function EquipmentForm({
   equipmentTypes,
   jobs,
   workers,
+  inspectionTemplates,
   equipmentId,
   initialValues = {},
 }: Props) {
@@ -174,6 +178,20 @@ export function EquipmentForm({
                 <option key={w.id} value={w.id}>{w.first_name} {w.last_name}</option>
               ))}
             </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Inspection Template</label>
+            <select
+              name="inspection_template_id"
+              defaultValue={initialValues.inspectionTemplateId ?? ''}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="">— None assigned —</option>
+              {inspectionTemplates.map((t) => (
+                <option key={t.id} value={t.id}>{t.title}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-400">This template will be used when scanning the equipment QR code to perform an inspection.</p>
           </div>
         </div>
       </div>
