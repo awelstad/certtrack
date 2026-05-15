@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ReportPrintHeader } from '@/components/reports/ReportPrintHeader'
 import { ReportExportButtons } from '@/components/reports/ReportExportButtons'
 import { ReportTable, Td } from '@/components/reports/ReportTable'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import { daysUntilExpiry } from '@/lib/types'
 
 const PRINT_STYLE = `
@@ -71,6 +71,8 @@ export default async function ExpiringCertsReport({
     const ct = c.certification_types as unknown as { name: string } | null
     const days = c.expiry_date ? daysUntilExpiry(c.expiry_date) : null
     return {
+      _workerId:     w?.id ?? null,
+      _certId:       c.id,
       Worker:        w ? `${w.first_name} ${w.last_name}` : '—',
       Trade:         w?.trade ?? '—',
       Employer:      w?.employer ?? '—',
@@ -153,6 +155,7 @@ export default async function ExpiringCertsReport({
             { header: 'Expires' },
             { header: 'Days Left' },
             { header: 'Job Site' },
+            { header: '' },
           ]}
           rowCount={rows.length}
           empty="No certifications expiring in this window."
@@ -161,7 +164,15 @@ export default async function ExpiringCertsReport({
             const urgent = typeof r._days === 'number' && r._days <= 7
             return (
               <tr key={i} className="hover:bg-slate-50">
-                <Td><span className="font-medium text-slate-900">{r.Worker}</span></Td>
+                <Td>
+                  {r._workerId ? (
+                    <Link href={`/workers/${r._workerId}`} className="font-medium text-slate-900 hover:text-orange-600 hover:underline">
+                      {r.Worker}
+                    </Link>
+                  ) : (
+                    <span className="font-medium text-slate-900">{r.Worker}</span>
+                  )}
+                </Td>
                 <Td>{r.Trade}</Td>
                 <Td>{r.Employer}</Td>
                 <Td>{r.Certification}</Td>
@@ -177,6 +188,17 @@ export default async function ExpiringCertsReport({
                   {r['Days Left']}d
                 </Td>
                 <Td>{r['Job Site']}</Td>
+                <Td>
+                  {r._workerId && (
+                    <Link
+                      href={`/workers/${r._workerId}/certifications/${r._certId}`}
+                      className="report-print-hide inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-orange-600"
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Edit
+                    </Link>
+                  )}
+                </Td>
               </tr>
             )
           })}

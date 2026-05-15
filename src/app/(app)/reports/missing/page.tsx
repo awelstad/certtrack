@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ReportPrintHeader } from '@/components/reports/ReportPrintHeader'
 import { ReportExportButtons } from '@/components/reports/ReportExportButtons'
 import { ReportTable, Td } from '@/components/reports/ReportTable'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
 
 const PRINT_STYLE = `
   @media print {
@@ -65,6 +65,8 @@ export default async function MissingCertsReport({
     const w = c.workers as unknown as { id: string; first_name: string; last_name: string; trade: string | null; employer: string | null } | null
     const ct = c.certification_types as unknown as { name: string } | null
     return {
+      _workerId:     w?.id ?? null,
+      _certId:       c.id,
       Worker:        w ? `${w.first_name} ${w.last_name}` : '—',
       Trade:         w?.trade ?? '—',
       Employer:      w?.employer ?? '—',
@@ -137,6 +139,7 @@ export default async function MissingCertsReport({
             { header: 'Status' },
             { header: 'Job Site' },
             { header: 'Notes' },
+            { header: '' },
           ]}
           rowCount={rows.length}
           empty="No missing or incomplete certifications found."
@@ -145,7 +148,15 @@ export default async function MissingCertsReport({
             const cfg = STATUS_CONFIG[r._status] ?? { label: r.Status, cls: 'bg-slate-50 border-slate-200 text-slate-600' }
             return (
               <tr key={i} className="hover:bg-slate-50">
-                <Td><span className="font-medium text-slate-900">{r.Worker}</span></Td>
+                <Td>
+                  {r._workerId ? (
+                    <Link href={`/workers/${r._workerId}`} className="font-medium text-slate-900 hover:text-orange-600 hover:underline">
+                      {r.Worker}
+                    </Link>
+                  ) : (
+                    <span className="font-medium text-slate-900">{r.Worker}</span>
+                  )}
+                </Td>
                 <Td>{r.Trade}</Td>
                 <Td>{r.Employer}</Td>
                 <Td>{r.Certification}</Td>
@@ -156,6 +167,17 @@ export default async function MissingCertsReport({
                 </Td>
                 <Td>{r['Job Site']}</Td>
                 <Td className="max-w-xs truncate text-slate-500">{r.Notes}</Td>
+                <Td>
+                  {r._workerId && (
+                    <Link
+                      href={`/workers/${r._workerId}/certifications/${r._certId}`}
+                      className="report-print-hide inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-orange-600"
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Edit
+                    </Link>
+                  )}
+                </Td>
               </tr>
             )
           })}
