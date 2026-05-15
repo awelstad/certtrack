@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ClearworkMark } from '@/components/ui/ClearworkMark'
-import { Wrench, CheckCircle2, AlertTriangle, Clock, Calendar, CheckCircle, XCircle, MinusCircle } from 'lucide-react'
+import Link from 'next/link'
+import { Wrench, CheckCircle2, AlertTriangle, Clock, Calendar, CheckCircle, XCircle, MinusCircle, ClipboardList, Plus } from 'lucide-react'
 
 type ChecklistItem = {
   id: string
@@ -151,9 +152,27 @@ export default async function PublicEquipmentPage({ params }: { params: Promise<
           )}
         </div>
 
+        {/* Action buttons */}
+        <div className="grid grid-cols-2 gap-3">
+          <Link
+            href={`/eq/${publicId}/inspect`}
+            className="flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3.5 text-sm font-semibold text-orange-700 shadow-sm transition-colors hover:bg-orange-100"
+          >
+            <Plus className="h-4 w-4" />
+            New Inspection
+          </Link>
+          <a
+            href="#inspections"
+            className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          >
+            <ClipboardList className="h-4 w-4" />
+            Past Inspections
+          </a>
+        </div>
+
         {/* Inspection history with full checklist */}
         {inspections && inspections.length > 0 && (
-          <div className="space-y-4">
+          <div id="inspections" className="space-y-4">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
               <Calendar className="h-4 w-4 text-slate-400" />
               Recent Inspections
