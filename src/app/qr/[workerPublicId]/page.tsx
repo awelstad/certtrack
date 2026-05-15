@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { certExpiryLabel } from '@/lib/types'
 import { calculateWorkerOverallStatus } from '@/lib/certifications'
 import { BrandingHeader } from '@/components/ui/BrandingHeader'
-import { ShieldCheck, ShieldAlert, ShieldX, Clock, FileText } from 'lucide-react'
+import { ShieldCheck, ShieldAlert, ShieldX, Clock, FileText, ClipboardList, CheckCircle2, XCircle } from 'lucide-react'
 import type { CertStatus } from '@/lib/types'
 
 export default async function QrWorkerPage({
@@ -55,6 +55,66 @@ export default async function QrWorkerPage({
         signedUrls[c.id] = data?.signedUrl ?? null
       })
   )
+
+  // JHA status for today — find all jobs this worker is on, then today's JHAs
+  const today = new Date().toISOString().split('T')[0]
+
+  const { data: jobWorkerRows } = await admin
+    .from('job_workers')
+    .select('job_id, jobs(id, name, status)')
+    .eq('worker_id', worker.id)
+
+  const activeJobIds = (jobWorkerRows ?? [])
+    .filter((jw) => {
+      const j = jw.jobs as unknown as { status: string } | null
+      return j?.status === 'active'
+    })
+    .map((jw) => jw.job_id)
+
+  type JhaStatus = { jhaId: string; jhaTitle: string; jobName: string; signed: boolean }
+  type JobJhaStatus = { jobName: string; jhas: JhaStatus[]; noJhaToday: boolean }
+
+  const jobJhaStatuses: JobJhaStatus[] = []
+
+  if (activeJobIds.length > 0) {
+    const { data: todayJhas } = await admin
+      .from('jhas')
+      .select('id, title, job_id, jobs(name)')
+      .in('job_id', activeJobIds)
+      .eq('work_date', today)
+      .neq('status', 'draft')
+
+    const jhaIds = (todayJhas ?? []).map((j) => j.id)
+
+    const { data: sigRows } = jhaIds.length
+      ? await admin
+          .from('jha_signatures')
+          .select('jha_id')
+          .eq('worker_id', worker.id)
+          .in('jha_id', jhaIds)
+      : { data: [] }
+
+    const signedJhaIds = new Set((sigRows ?? []).map((s) => s.jha_id))
+
+    // Group by job
+    for (const jw of (jobWorkerRows ?? [])) {
+      const j = jw.jobs as unknown as { id: string; name: string; status: string } | null
+      if (!j || j.status !== 'active') continue
+
+      const jobJhas = (todayJhas ?? []).filter((jha) => jha.job_id === jw.job_id)
+
+      jobJhaStatuses.push({
+        jobName: j.name,
+        noJhaToday: jobJhas.length === 0,
+        jhas: jobJhas.map((jha) => ({
+          jhaId: jha.id,
+          jhaTitle: jha.title,
+          jobName: j.name,
+          signed: signedJhaIds.has(jha.id),
+        })),
+      })
+    }
+  }
 
   // Log the QR scan (best-effort)
   const headersList = await headers()
@@ -200,6 +260,50 @@ export default async function QrWorkerPage({
             </ul>
           )}
         </div>
+
+        {/* Daily JHA status */}
+        {jobJhaStatuses.length > 0 && (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
+              <ClipboardList className="h-4 w-4 text-slate-400" />
+              <h2 className="text-sm font-semibold text-slate-700">Daily JHA — {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</h2>
+            </div>
+            <ul className="divide-y divide-slate-100">
+              {jobJhaStatuses.map((jobStatus) => (
+                jobStatus.noJhaToday ? (
+                  <li key={jobStatus.jobName} className="flex items-center gap-3 px-5 py-3.5">
+                    <Clock className="h-4 w-4 shrink-0 text-slate-300" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-500">{jobStatus.jobName}</p>
+                      <p className="text-xs text-slate-400">No JHA on file for today</p>
+                    </div>
+                  </li>
+                ) : (
+                  jobStatus.jhas.map((jha) => (
+                    <li key={jha.jhaId} className="flex items-center gap-3 px-5 py-3.5">
+                      {jha.signed ? (
+                        <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
+                      ) : (
+                        <XCircle className="h-5 w-5 shrink-0 text-red-500" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-sm font-medium text-slate-900">{jha.jhaTitle}</p>
+                        <p className="text-xs text-slate-500">{jha.jobName}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                        jha.signed
+                          ? 'border-green-200 bg-green-50 text-green-700'
+                          : 'border-red-200 bg-red-50 text-red-700'
+                      }`}>
+                        {jha.signed ? 'Signed' : 'Not Signed'}
+                      </span>
+                    </li>
+                  ))
+                )
+              ))}
+            </ul>
+          </div>
+        )}
 
         <p className="text-center text-xs text-slate-400">
           Verified by Clearwork &middot; Live status as of {new Date().toLocaleDateString()}
