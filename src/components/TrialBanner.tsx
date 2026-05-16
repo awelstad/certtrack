@@ -17,7 +17,7 @@ export function TrialBanner({ trialEndsAt, trialStatus }: Props) {
       <div className="bg-red-600 text-white px-4 py-2.5 text-sm flex items-center justify-between gap-4">
         <span className="font-medium">Your free trial has ended.</span>
         <Link
-          href="https://clearwork.app/#pricing"
+          href="https://clearworkers.com/#pricing"
           target="_blank"
           className="rounded-md bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
         >
@@ -36,7 +36,7 @@ export function TrialBanner({ trialEndsAt, trialStatus }: Props) {
         {' '}Upgrade before it ends to keep your data and access.
       </span>
       <Link
-        href="https://clearwork.app/#pricing"
+        href="https://clearworkers.com/#pricing"
         target="_blank"
         className="rounded-md bg-white px-3 py-1 text-xs font-semibold text-orange-600 hover:bg-orange-50 transition-colors flex-shrink-0"
       >
