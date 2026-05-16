@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getPlan, PLAN_LIMITS } from '@/lib/plans'
 
 export type ImportRow = {
   first_name: string
@@ -34,6 +35,25 @@ export async function importWorkers(rows: ImportRow[]): Promise<ImportResult> {
   if (!profile) return { imported: 0, failed: rows.length, errors: ['Profile not found'] }
 
   const orgId = profile.organization_id
+
+  // Plan limit check
+  const { data: orgData } = await supabase.from('organizations').select('plan').eq('id', orgId).single()
+  const limits = PLAN_LIMITS[getPlan(orgData?.plan)]
+  if (limits.workers < Infinity) {
+    const { count: currentCount } = await supabase
+      .from('workers')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId)
+      .eq('status', 'active')
+    const available = limits.workers - (currentCount ?? 0)
+    if (available <= 0) {
+      return { imported: 0, failed: rows.length, errors: [`Your free plan allows up to ${limits.workers} active workers. Upgrade to import more.`] }
+    }
+    if (rows.length > available) {
+      return { imported: 0, failed: rows.length, errors: [`You can only add ${available} more worker${available !== 1 ? 's' : ''} on your free plan. Upgrade to import all ${rows.length} rows.`] }
+    }
+  }
+
   const errors: string[] = []
   let imported = 0
   let failed = 0

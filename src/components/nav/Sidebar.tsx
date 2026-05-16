@@ -19,6 +19,7 @@ import {
   Building2,
   ShieldCheck,
   Smartphone,
+  Upload,
 } from 'lucide-react'
 import { JobFilterSelect } from './JobFilterSelect'
 import { OrgSwitcher } from './OrgSwitcher'
@@ -45,6 +46,7 @@ const navItems: NavItem[] = [
 const adminItems: NavItem[] = [
   { href: '/admin/branding', label: 'Settings', icon: Settings, adminOnly: true },
   { href: '/admin/install', label: 'Install App', icon: Smartphone, adminOnly: true },
+  { href: '/workers/import', label: 'Import Workers', icon: Upload, adminOnly: true },
 ]
 
 const adminRoles: Role[] = ['owner', 'admin']
