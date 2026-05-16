@@ -35,6 +35,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/workers', label: 'Workers', icon: Users },
+  { href: '/workers/import', label: 'Import Workers', icon: Upload },
   { href: '/certifications', label: 'Certifications', icon: Award },
   { href: '/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/jha', label: 'JHA', icon: AlertTriangle },
@@ -46,7 +47,6 @@ const navItems: NavItem[] = [
 const adminItems: NavItem[] = [
   { href: '/admin/branding', label: 'Settings', icon: Settings, adminOnly: true },
   { href: '/admin/install', label: 'Install App', icon: Smartphone, adminOnly: true },
-  { href: '/workers/import', label: 'Import Workers', icon: Upload, adminOnly: true },
 ]
 
 const adminRoles: Role[] = ['owner', 'admin']
