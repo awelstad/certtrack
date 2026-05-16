@@ -167,7 +167,7 @@ export async function submitInspection(
       organization_id:     profile.organization_id,
       equipment_id:        equipmentId,
       template_id:         templateId,
-      inspected_by:        user.id,
+      inspector_id:        user.id,
       inspector_name:      inspectorName,
       inspector_signature: inspectorSig,
       inspection_date:     inspectionDate,

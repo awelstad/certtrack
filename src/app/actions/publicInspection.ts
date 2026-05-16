@@ -31,7 +31,7 @@ export async function submitPublicInspection(
       organization_id:     (await admin.from('equipment').select('organization_id').eq('id', equipmentId).single()).data?.organization_id,
       equipment_id:        equipmentId,
       template_id:         templateId,
-      inspected_by:        null,
+      inspector_id:        null,
       inspector_name:      inspectorName,
       inspector_signature: inspectorSig,
       inspection_date:     inspectionDate,
