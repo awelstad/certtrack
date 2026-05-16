@@ -51,21 +51,14 @@ export function InspectionTemplateBuilder({
     setItems((prev) => prev.map((it) => it.id === id ? { ...it, is_critical: !it.is_critical } : it))
   }
 
-  // Group equipment types by category
   const categories = Array.from(new Set(equipmentTypes.map((t) => t.category)))
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    const fd = new FormData(e.currentTarget)
-    fd.set('checklist_items', JSON.stringify(items))
-    if (templateId) fd.set('templateId', templateId)
-    formAction(fd)
-  }
-
   return (
-    <form
-      onSubmit={(e) => { e.preventDefault(); handleSubmit(e) }}
-      className="space-y-6"
-    >
+    <form action={formAction} className="space-y-6">
+      {/* Hidden fields for dynamic state */}
+      <input type="hidden" name="checklist_items" value={JSON.stringify(items)} />
+      {templateId && <input type="hidden" name="templateId" value={templateId} />}
+
       {/* Basic info */}
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-500">Template Details</h2>
@@ -101,6 +94,7 @@ export function InspectionTemplateBuilder({
                   ))}
                 </optgroup>
               ))}
+              <option value="">Other / General Purpose</option>
             </select>
           </div>
           <div>
