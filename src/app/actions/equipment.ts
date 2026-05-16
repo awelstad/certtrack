@@ -213,6 +213,72 @@ export async function submitInspection(
   return { inspectionId: inspection.id }
 }
 
+export async function updateInspection(
+  _prev: { error?: string } | null,
+  formData: FormData
+): Promise<{ error?: string }> {
+  const auth = await getAuthedUser()
+  if ('error' in auth) return { error: auth.error }
+  const { supabase, user, profile } = auth
+
+  const inspectionId  = formData.get('inspectionId') as string
+  const equipmentId   = formData.get('equipmentId') as string
+  const inspectorName = (formData.get('inspectorName') as string)?.trim()
+  const inspectorSig  = (formData.get('inspectorSignature') as string) || null
+  const inspectionDate = (formData.get('inspectionDate') as string) || new Date().toISOString().slice(0, 10)
+  const notes         = (formData.get('notes') as string)?.trim() || null
+
+  if (!inspectorName) return { error: 'Inspector name is required' }
+
+  const rawResults = formData.get('results') as string
+  let items
+  try { items = parseChecklist(JSON.parse(rawResults)) } catch { return { error: 'Invalid checklist data' } }
+
+  const status = calculateInspectionStatus(items)
+
+  const { error: upErr } = await supabase
+    .from('equipment_inspections')
+    .update({
+      inspector_name:      inspectorName,
+      inspector_signature: inspectorSig,
+      inspection_date:     inspectionDate,
+      status,
+      results:             items,
+      notes,
+    })
+    .eq('id', inspectionId)
+    .eq('organization_id', profile.organization_id)
+
+  if (upErr) return { error: upErr.message }
+
+  const equipmentUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (status === 'out_of_service') {
+    equipmentUpdate.status = 'out_of_service'
+  } else if (status === 'pass') {
+    equipmentUpdate.status = 'active'
+  }
+  await supabase
+    .from('equipment')
+    .update(equipmentUpdate)
+    .eq('id', equipmentId)
+    .eq('organization_id', profile.organization_id)
+
+  await createAuditLog({
+    supabase,
+    organizationId: profile.organization_id,
+    actorId: user.id,
+    action: 'equipment_inspection_updated',
+    entityType: 'equipment',
+    entityId: equipmentId,
+    metadata: { inspectionId, status },
+  })
+
+  revalidatePath(`/equipment/${equipmentId}/inspections/${inspectionId}`)
+  revalidatePath(`/equipment/${equipmentId}`)
+  revalidatePath('/equipment')
+  return {}
+}
+
 // ── Inspection Templates ───────────────────────────────────────
 
 export async function createInspectionTemplate(

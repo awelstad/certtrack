@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { EquipmentInspectionStatusBadge } from '@/components/equipment/EquipmentInspectionStatusBadge'
 import { EquipmentInspectionPdfExportButton } from '@/components/equipment/EquipmentInspectionPdfExportButton'
 import { parseChecklist } from '@/lib/equipment'
-import { ArrowLeft, CheckCircle2, XCircle, MinusCircle, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, MinusCircle, AlertTriangle, Pencil } from 'lucide-react'
 
 const resultIcon = {
   pass: <CheckCircle2 className="h-4 w-4 text-green-500" />,
@@ -73,7 +73,16 @@ export default async function InspectionDetailPage({
             <ArrowLeft className="h-4 w-4" />
             Back to Equipment
           </Link>
-          <EquipmentInspectionPdfExportButton equipmentId={id} />
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/equipment/${id}/inspections/${inspectionId}/edit`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </Link>
+            <EquipmentInspectionPdfExportButton equipmentId={id} />
+          </div>
         </div>
 
         {/* Header */}
