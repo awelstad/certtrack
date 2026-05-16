@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { getPlan, PLAN_LIMITS } from '@/lib/plans'
 import type { Role } from '@/lib/types'
 
 const MANAGER_ROLES: Role[] = ['owner', 'admin', 'pm', 'superintendent']
@@ -32,6 +33,19 @@ export async function createToolboxTalk(
   const jobId       = (formData.get('job_id') as string) || null
 
   if (!title) return { error: 'Title is required' }
+
+  // Plan limit check
+  const { data: orgData } = await supabase.from('organizations').select('plan').eq('id', profile.organization_id).single()
+  const limits = PLAN_LIMITS[getPlan(orgData?.plan)]
+  if (limits.toolboxTalks < Infinity) {
+    const { count } = await supabase
+      .from('toolbox_talks')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', profile.organization_id)
+    if ((count ?? 0) >= limits.toolboxTalks) {
+      return { error: `Your free plan allows up to ${limits.toolboxTalks} toolbox talks. Upgrade to create more.` }
+    }
+  }
 
   const { data, error } = await supabase
     .from('toolbox_talks')

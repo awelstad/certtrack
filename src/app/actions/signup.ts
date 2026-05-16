@@ -25,18 +25,13 @@ export async function signUp(
 
   const slug = company.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
-  const trialStartedAt = new Date()
-  const trialEndsAt    = new Date(trialStartedAt.getTime() + 14 * 24 * 60 * 60 * 1000)
-
-  // Create organization with trial
+  // Create organization on free plan
   const { data: org, error: orgErr } = await admin
     .from('organizations')
     .insert({
-      name:             company,
+      name: company,
       slug,
-      trial_started_at: trialStartedAt.toISOString(),
-      trial_ends_at:    trialEndsAt.toISOString(),
-      trial_status:     'trialing',
+      plan: 'free',
     })
     .select('id')
     .single()

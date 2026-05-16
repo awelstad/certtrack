@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAuditLog } from '@/lib/audit'
 import { calculateInspectionStatus, parseChecklist, parseChecklistTemplate } from '@/lib/equipment'
+import { getPlan, PLAN_LIMITS } from '@/lib/plans'
 import type { Role } from '@/lib/types'
 
 const MANAGER_ROLES: Role[] = ['owner', 'admin', 'pm', 'superintendent']
@@ -52,6 +53,19 @@ export async function createEquipment(
 
   const name = (formData.get('name') as string)?.trim()
   if (!name) return { error: 'Name is required' }
+
+  // Plan limit check
+  const { data: orgData } = await supabase.from('organizations').select('plan').eq('id', profile.organization_id).single()
+  const limits = PLAN_LIMITS[getPlan(orgData?.plan)]
+  if (limits.equipment < Infinity) {
+    const { count } = await supabase
+      .from('equipment')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', profile.organization_id)
+    if ((count ?? 0) >= limits.equipment) {
+      return { error: `Your free plan allows up to ${limits.equipment} piece of equipment. Upgrade to add more.` }
+    }
+  }
 
   const payload = {
     organization_id:        profile.organization_id,

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAuditLog } from '@/lib/audit'
 import { parseFieldValues } from '@/lib/jha'
+import { getPlan, PLAN_LIMITS } from '@/lib/plans'
 import type { Role } from '@/lib/types'
 import type { JhaFieldValues, JhaStep } from '@/lib/jha'
 
@@ -58,6 +59,19 @@ export async function createJha(
 
   const title = (formData.get('title') as string)?.trim()
   if (!title) return { error: 'Title is required' }
+
+  // Plan limit check
+  const { data: orgData } = await supabase.from('organizations').select('plan').eq('id', profile.organization_id).single()
+  const limits = PLAN_LIMITS[getPlan(orgData?.plan)]
+  if (limits.jhas < Infinity) {
+    const { count } = await supabase
+      .from('jhas')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', profile.organization_id)
+    if ((count ?? 0) >= limits.jhas) {
+      return { error: `Your free plan allows up to ${limits.jhas} JHAs. Upgrade to create more.` }
+    }
+  }
 
   const field_values = parseFieldValuesFromForm(formData)
   if (!field_values) return { error: 'Invalid form data' }

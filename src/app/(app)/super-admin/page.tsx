@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { OrgPlanForm } from '@/components/OrgPlanForm'
 import { Plus, Building2, Users, HardHat, ExternalLink } from 'lucide-react'
 
 export default async function SuperAdminPage() {
@@ -19,10 +20,9 @@ export default async function SuperAdminPage() {
 
   const admin = createAdminClient()
 
-  // Fetch all orgs with their user and worker counts
   const { data: orgs } = await admin
     .from('organizations')
-    .select('id, name, slug, created_at')
+    .select('id, name, slug, plan, created_at')
     .order('created_at', { ascending: false })
 
   const orgIds = (orgs ?? []).map((o) => o.id)
@@ -46,7 +46,7 @@ export default async function SuperAdminPage() {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-5xl">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-6xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Platform Admin</h1>
@@ -87,7 +87,7 @@ export default async function SuperAdminPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50">
-              {['Organization', 'Slug', 'Users', 'Workers', 'Created', ''].map((h) => (
+              {['Organization', 'Slug', 'Plan', 'Users', 'Workers', 'Created', ''].map((h) => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{h}</th>
               ))}
             </tr>
@@ -97,6 +97,9 @@ export default async function SuperAdminPage() {
               <tr key={org.id} className="hover:bg-slate-50">
                 <td className="px-4 py-3 font-semibold text-slate-900">{org.name}</td>
                 <td className="px-4 py-3 font-mono text-xs text-slate-500">{org.slug}</td>
+                <td className="px-4 py-3">
+                  <OrgPlanForm orgId={org.id} currentPlan={org.plan ?? 'free'} />
+                </td>
                 <td className="px-4 py-3 text-slate-700">{profileMap.get(org.id) ?? 0}</td>
                 <td className="px-4 py-3 text-slate-700">{workerMap.get(org.id) ?? 0}</td>
                 <td className="px-4 py-3 text-slate-500">
@@ -114,7 +117,7 @@ export default async function SuperAdminPage() {
             ))}
             {(orgs ?? []).length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-400">
                   No organizations yet. Create the first one.
                 </td>
               </tr>

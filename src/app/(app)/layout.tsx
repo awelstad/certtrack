@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { Sidebar } from '@/components/nav/Sidebar'
 import { MobileNav } from '@/components/nav/MobileNav'
 import { TopBar } from '@/components/nav/TopBar'
-import { TrialBanner } from '@/components/TrialBanner'
+import { PlanBanner } from '@/components/PlanBanner'
 import type { Role } from '@/lib/types'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -14,8 +14,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect('/login')
 
-  // Use admin client for profile fetch — bypasses RLS so this always works
-  // regardless of which org the platform admin is currently viewing
   const adminForProfile = createAdminClient()
   const { data: profile } = await adminForProfile
     .from('profiles')
@@ -26,13 +24,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!profile) redirect('/login')
 
   const isPlatformAdmin = (profile.is_platform_admin as boolean) ?? false
-  // organization_id IS the active org — switchToOrg swaps it directly
   const activeOrgId = profile.organization_id as string
 
-  // Platform admins use the admin client so they can see any org's data
   const dataClient = isPlatformAdmin ? createAdminClient() : supabase
 
-  const [{ data: jobs }, { data: org }, cookieStore, allOrgsResult] = await Promise.all([
+  const [{ data: jobs }, { data: org }, cookieStore, allOrgsResult, usageCounts] = await Promise.all([
     dataClient
       .from('jobs')
       .select('id, name')
@@ -41,14 +37,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .order('name'),
     dataClient
       .from('organizations')
-      .select('name, logo_url, trial_ends_at, trial_status')
+      .select('name, logo_url, plan')
       .eq('id', activeOrgId)
       .single(),
     cookies(),
     isPlatformAdmin
       ? createAdminClient().from('organizations').select('id, name').order('name')
       : Promise.resolve({ data: null }),
+    // Fetch usage counts (used only for free plan banner)
+    Promise.all([
+      dataClient.from('workers').select('id', { count: 'exact', head: true }).eq('organization_id', activeOrgId).eq('status', 'active'),
+      dataClient.from('equipment').select('id', { count: 'exact', head: true }).eq('organization_id', activeOrgId),
+      dataClient.from('jhas').select('id', { count: 'exact', head: true }).eq('organization_id', activeOrgId),
+      dataClient.from('toolbox_talks').select('id', { count: 'exact', head: true }).eq('organization_id', activeOrgId),
+    ]),
   ])
+
+  const [workerRes, equipRes, jhaRes, talkRes] = usageCounts
 
   const selectedJobId = cookieStore.get('selected_job_id')?.value ?? null
 
@@ -62,6 +67,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const jobList = (jobs ?? []) as { id: string; name: string }[]
   const orgBranding = { name: org?.name ?? '', logo_url: org?.logo_url ?? null }
   const allOrgs = (allOrgsResult.data ?? []) as { id: string; name: string }[]
+  const orgPlan = (org?.plan as string) ?? 'free'
+
+  const usage = {
+    workers:      workerRes.count ?? 0,
+    equipment:    equipRes.count ?? 0,
+    jhas:         jhaRes.count ?? 0,
+    toolboxTalks: talkRes.count ?? 0,
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -75,9 +88,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <TopBar profile={safeProfile} jobs={jobList} selectedJobId={selectedJobId} org={orgBranding} />
       <div className="lg:pl-64">
-        {org?.trial_status === 'trialing' && org?.trial_ends_at && (
-          <TrialBanner trialEndsAt={org.trial_ends_at as string} trialStatus={org.trial_status as string} />
-        )}
+        <PlanBanner plan={orgPlan} usage={usage} />
         <main className="min-h-screen pb-20 lg:pb-0">
           {children}
         </main>

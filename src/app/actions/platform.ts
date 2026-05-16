@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isValidPlan } from '@/lib/plans'
 
 async function getCallerUserId() {
   const supabase = await createClient()
@@ -205,6 +206,20 @@ export async function inviteUserToOrg(
 
   revalidatePath(`/super-admin/orgs/${orgId}`)
   return { success: true }
+}
+
+export async function updateOrgPlan(orgId: string, plan: string): Promise<{ error?: string }> {
+  const auth = await getPlatformAdmin()
+  if ('error' in auth) return { error: auth.error }
+
+  if (!isValidPlan(plan)) return { error: 'Invalid plan' }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('organizations').update({ plan }).eq('id', orgId)
+  if (error) return { error: error.message }
+
+  revalidatePath('/super-admin')
+  return {}
 }
 
 export async function updateOrgName(
