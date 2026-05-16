@@ -227,23 +227,15 @@ export default async function QrWorkerPage({
               {approvedCerts.map((c) => {
                 const ct = c.certification_types as unknown as { name: string } | null
                 const expiry = certExpiryLabel(c.expiry_date)
+                const url = signedUrls[c.id]
+                const ext = c.document_url?.split('.').pop()?.toLowerCase() ?? ''
+                const isImage = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'gif'].includes(ext)
                 return (
-                  <li key={c.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
-                    <p className="text-sm font-medium text-slate-900">{ct?.name ?? '—'}</p>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {signedUrls[c.id] && (
-                        <a
-                          href={signedUrls[c.id]!}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                        >
-                          <FileText className="h-3 w-3" />
-                          View
-                        </a>
-                      )}
+                  <li key={c.id} className="px-5 py-3.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-slate-900">{ct?.name ?? '—'}</p>
                       <span
-                        className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                        className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${
                           expiry.color === 'green'
                             ? 'border-green-200 bg-green-50 text-green-700'
                             : expiry.color === 'yellow'
@@ -254,6 +246,33 @@ export default async function QrWorkerPage({
                         {expiry.label}
                       </span>
                     </div>
+
+                    {url && (
+                      <div className="mt-2">
+                        {isImage ? (
+                          <a href={url} target="_blank" rel="noopener noreferrer">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={`${ct?.name ?? 'Certificate'} document`}
+                              className="w-full rounded-lg border border-slate-200 object-cover"
+                              style={{ maxHeight: '220px', objectFit: 'cover', objectPosition: 'top' }}
+                            />
+                            <p className="mt-1 text-center text-xs text-slate-400">Tap to view full size</p>
+                          </a>
+                        ) : (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                          >
+                            <FileText className="h-4 w-4 text-slate-500" />
+                            View Certificate Document
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </li>
                 )
               })}
