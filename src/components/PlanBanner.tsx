@@ -38,8 +38,7 @@ export function PlanBanner({ plan, usage }: Props) {
         <span>{usage.toolboxTalks}/{limits.toolboxTalks} toolbox talks</span>
       </span>
       <Link
-        href="https://clearworkers.com/#pricing"
-        target="_blank"
+        href="/api/stripe/checkout?plan=starter"
         className="rounded-md bg-white px-3 py-1 text-xs font-semibold text-orange-600 hover:bg-orange-50 transition-colors flex-shrink-0"
       >
         Upgrade &#8594;
