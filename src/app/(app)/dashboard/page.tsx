@@ -7,7 +7,7 @@ import {
   AlertTriangle, Clock, XCircle, ShieldOff, Users,
   ClipboardList, FileCheck, PenLine, Wrench, AlertCircle,
   CalendarClock, FileText, ChevronRight, ShieldCheck,
-  HardHat, Briefcase, Award, BookOpen,
+  HardHat, Briefcase, Award, BookOpen, UserCheck,
 } from 'lucide-react'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -91,6 +91,9 @@ export default async function DashboardPage() {
   const in60d = new Date(Date.now() +  60 * 864e5).toISOString().split('T')[0]
   const in180d = new Date(Date.now() + 180 * 864e5).toISOString().split('T')[0]
 
+  const todayStart = new Date()
+  todayStart.setUTCHours(0, 0, 0, 0)
+
   const cookieStore = await cookies()
   const selectedJobId = cookieStore.get('selected_job_id')?.value ?? null
 
@@ -139,6 +142,8 @@ export default async function DashboardPage() {
     { data: activeJobs },
     // toolbox count this month
     { count: toolboxMonthCount },
+    // today's site attendance
+    { data: attendanceToday },
   ] = await Promise.all([
     hasWorkers ? certQ().eq('status', 'approved').lt('expiry_date', today) : Promise.resolve({ count: 0 }),
     hasWorkers ? certQ().eq('status', 'approved').gte('expiry_date', today).lte('expiry_date', in30d) : Promise.resolve({ count: 0 }),
@@ -168,6 +173,8 @@ export default async function DashboardPage() {
     supabase.from('jobs').select('id, name').eq('organization_id', orgId).eq('status', 'active').order('name').limit(6),
     // toolbox talks this month
     supabase.from('toolbox_talks').select('id', { count: 'exact', head: true }).eq('organization_id', orgId).gte('talk_date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]),
+    // today's site attendance
+    supabase.from('site_attendance').select('worker_id, job_id, event').eq('organization_id', orgId).gte('scanned_at', todayStart.toISOString()).order('scanned_at', { ascending: true }),
   ])
 
   // ── Derived values ─────────────────────────────────────────────────────────
@@ -194,6 +201,17 @@ export default async function DashboardPage() {
     }).length
     return { month: MONTH_LABELS[mo], count, near: i < 2 }
   })
+
+  // On-site counts from attendance
+  const lastEventByKey: Record<string, { event: string; jobId: string }> = {}
+  for (const row of attendanceToday ?? []) {
+    lastEventByKey[`${row.worker_id}-${row.job_id}`] = { event: row.event, jobId: row.job_id }
+  }
+  const onSiteByJob: Record<string, number> = {}
+  for (const { event, jobId } of Object.values(lastEventByKey)) {
+    if (event === 'check_in') onSiteByJob[jobId] = (onSiteByJob[jobId] ?? 0) + 1
+  }
+  const totalOnSite = Object.values(onSiteByJob).reduce((a, b) => a + b, 0)
 
   // Job worker counts
   const jobIds = (activeJobs ?? []).map((j) => j.id)
@@ -284,7 +302,7 @@ export default async function DashboardPage() {
           {[
             { label: 'Active Workers',    value: total,                    icon: HardHat,    href: '/workers',   color: 'bg-slate-100 text-slate-600' },
             { label: 'Active Jobs',       value: (activeJobs ?? []).length, icon: Briefcase,  href: '/jobs',      color: 'bg-blue-50 text-blue-600' },
-            { label: 'Equipment on Site', value: 0,                        icon: Wrench,     href: '/equipment', color: 'bg-purple-50 text-purple-600' },
+            { label: 'On Site Now',       value: totalOnSite,              icon: UserCheck,  href: '/attendance', color: 'bg-green-50 text-green-600' },
             { label: 'Talks This Month',  value: toolboxMonthCount ?? 0,   icon: ShieldCheck, href: '/toolbox',  color: 'bg-green-50 text-green-600' },
           ].map((m) => (
             <Link
@@ -415,6 +433,12 @@ export default async function DashboardPage() {
                       <HardHat className="mr-1 inline h-3 w-3" />
                       {workerCount} worker{workerCount !== 1 ? 's' : ''}
                     </p>
+                    {(onSiteByJob[job.id] ?? 0) > 0 && (
+                      <p className="mt-0.5 text-xs font-semibold text-green-600">
+                        <UserCheck className="mr-1 inline h-3 w-3" />
+                        {onSiteByJob[job.id]} on site now
+                      </p>
+                    )}
                   </div>
                   <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-slate-500" />
                 </Link>
