@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { signOut } from '@/app/actions/auth'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/types'
@@ -23,6 +24,7 @@ import {
   HardHat,
   ScanLine,
   UserCheck,
+  BookOpen,
 } from 'lucide-react'
 import { JobFilterSelect } from './JobFilterSelect'
 import { OrgSwitcher } from './OrgSwitcher'
@@ -32,27 +34,29 @@ type NavItem = {
   href: string
   label: string
   icon: React.ElementType
-  adminOnly?: boolean
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/workers', label: 'Workers', icon: Users },
+  { href: '/dashboard',    label: 'Dashboard',     icon: LayoutDashboard },
+  { href: '/workers',      label: 'Workers',        icon: Users },
   { href: '/certifications', label: 'Certifications', icon: Award },
-  { href: '/jobs', label: 'Jobs', icon: Briefcase },
-  { href: '/jha', label: 'JHA', icon: AlertTriangle },
-  { href: '/equipment', label: 'Equipment', icon: Wrench },
-  { href: '/toolbox', label: 'Toolbox Talks', icon: ShieldCheck },
-  { href: '/kiosk', label: 'Site Kiosk', icon: ScanLine },
-  { href: '/attendance', label: 'Attendance', icon: UserCheck },
-  { href: '/help', label: 'Help & Guide', icon: HelpCircle },
+  { href: '/jobs',         label: 'Jobs',           icon: Briefcase },
+  { href: '/jha',          label: 'JHA',            icon: AlertTriangle },
+  { href: '/equipment',    label: 'Equipment',      icon: Wrench },
+  { href: '/toolbox',      label: 'Toolbox Talks',  icon: ShieldCheck },
+  { href: '/kiosk',        label: 'Site Kiosk',     icon: ScanLine },
+  { href: '/attendance',   label: 'Attendance',     icon: UserCheck },
 ]
 
-const adminItems: NavItem[] = [
-  { href: '/admin/branding', label: 'Settings', icon: Settings, adminOnly: true },
-  { href: '/workers/import', label: 'Import Workers', icon: Upload, adminOnly: true },
-  { href: '/admin/install', label: 'Install App', icon: Smartphone, adminOnly: true },
+const settingsItems: NavItem[] = [
+  { href: '/admin/branding', label: 'General Settings', icon: Settings },
+  { href: '/workers/import', label: 'Import Workers',   icon: Upload },
+  { href: '/admin/install',  label: 'Install App',      icon: Smartphone },
+  { href: '/help',           label: 'Help & Guide',     icon: HelpCircle },
+  { href: '/admin/guide',    label: 'Setup Guide',      icon: BookOpen },
 ]
+
+const settingsRoots = settingsItems.map(i => i.href)
 
 const adminRoles: Role[] = ['owner', 'admin']
 
@@ -78,10 +82,29 @@ export function Sidebar({ profile, jobs, selectedJobId, org, allOrgs, activeOrgI
   const pathname = usePathname()
   const isAdmin = adminRoles.includes(profile.role)
 
+  const settingsActive = settingsRoots.some(r => pathname.startsWith(r))
+  const [settingsOpen, setSettingsOpen] = useState(settingsActive)
+
+  // Keep submenu open if navigating to a settings route
+  useEffect(() => {
+    if (settingsActive) setSettingsOpen(true)
+  }, [settingsActive])
+
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard'
     return pathname.startsWith(href)
   }
+
+  const linkClass = (active: boolean) =>
+    cn(
+      'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+      active
+        ? 'bg-orange-500 text-white'
+        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+    )
+
+  const iconClass = (active: boolean) =>
+    cn('h-4 w-4 shrink-0', active ? 'text-white' : 'text-slate-500 group-hover:text-white')
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-slate-900 lg:flex">
@@ -131,21 +154,8 @@ export function Sidebar({ profile, jobs, selectedJobId, org, allOrgs, activeOrgI
             const active = isActive(item.href)
             return (
               <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                    active
-                      ? 'bg-orange-500 text-white'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      'h-4 w-4 shrink-0',
-                      active ? 'text-white' : 'text-slate-500 group-hover:text-white'
-                    )}
-                  />
+                <Link href={item.href} className={linkClass(active)}>
+                  <item.icon className={iconClass(active)} />
                   {item.label}
                   {active && <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />}
                 </Link>
@@ -154,38 +164,43 @@ export function Sidebar({ profile, jobs, selectedJobId, org, allOrgs, activeOrgI
           })}
         </ul>
 
-        {/* Admin section */}
+        {/* Settings submenu — admin only */}
         {isAdmin && (
           <div className="mt-6">
-            <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
-              Admin
-            </p>
-            <ul className="space-y-0.5">
-              {adminItems.map((item) => {
-                const active = isActive(item.href)
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                        active
-                          ? 'bg-orange-500 text-white'
-                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                      )}
-                    >
-                      <item.icon
-                        className={cn(
-                          'h-4 w-4 shrink-0',
-                          active ? 'text-white' : 'text-slate-500 group-hover:text-white'
-                        )}
-                      />
-                      {item.label}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
+            <button
+              onClick={() => setSettingsOpen(o => !o)}
+              className={cn(
+                'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                settingsActive
+                  ? 'text-orange-400'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              )}
+            >
+              <Settings className={cn('h-4 w-4 shrink-0', settingsActive ? 'text-orange-400' : 'text-slate-500 group-hover:text-white')} />
+              <span>Settings</span>
+              <ChevronRight
+                className={cn(
+                  'ml-auto h-3.5 w-3.5 transition-transform duration-200',
+                  settingsOpen ? 'rotate-90' : ''
+                )}
+              />
+            </button>
+
+            {settingsOpen && (
+              <ul className="mt-0.5 ml-3 space-y-0.5 border-l border-slate-800 pl-3">
+                {settingsItems.map((item) => {
+                  const active = isActive(item.href)
+                  return (
+                    <li key={item.href}>
+                      <Link href={item.href} className={linkClass(active)}>
+                        <item.icon className={iconClass(active)} />
+                        {item.label}
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
           </div>
         )}
 
@@ -200,16 +215,8 @@ export function Sidebar({ profile, jobs, selectedJobId, org, allOrgs, activeOrgI
                 const active = isActive(item.href)
                 return (
                   <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                        active
-                          ? 'bg-orange-500 text-white'
-                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                      )}
-                    >
-                      <item.icon className={cn('h-4 w-4 shrink-0', active ? 'text-white' : 'text-slate-500 group-hover:text-white')} />
+                    <Link href={item.href} className={linkClass(active)}>
+                      <item.icon className={iconClass(active)} />
                       {item.label}
                     </Link>
                   </li>
