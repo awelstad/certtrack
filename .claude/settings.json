@@ -20,7 +20,9 @@
       "Bash(Write-Host \"Directory ready\")",
       "Bash(sed -i 's/title=\"Job Hazard Analysis\"/title=\"JHA\"/' \"src/app/\\(app\\)/jha/page.tsx\")",
       "Bash(sed -i 's/description=\"Create, review, and sign JHAs for job sites.\"/description=\"Create, review, and sign Job Hazard Analyses.\"/' \"src/app/\\(app\\)/jha/page.tsx\")",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(node -e ' *)",
+      "Bash(gh run *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\AlexanderWelstad\\OneDrive - FEC\\Desktop\\certtrack",
