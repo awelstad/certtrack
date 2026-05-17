@@ -21,6 +21,7 @@ import {
   Smartphone,
   Upload,
   HardHat,
+  ScanLine,
 } from 'lucide-react'
 import { JobFilterSelect } from './JobFilterSelect'
 import { OrgSwitcher } from './OrgSwitcher'
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { href: '/jha', label: 'JHA', icon: AlertTriangle },
   { href: '/equipment', label: 'Equipment', icon: Wrench },
   { href: '/toolbox', label: 'Toolbox Talks', icon: ShieldCheck },
+  { href: '/kiosk', label: 'Site Kiosk', icon: ScanLine },
   { href: '/help', label: 'Help & Guide', icon: HelpCircle },
 ]
 
