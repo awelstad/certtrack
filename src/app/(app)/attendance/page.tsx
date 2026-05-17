@@ -125,7 +125,7 @@ export default async function AttendanceOverviewPage({
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-slate-900">Add a hardware kiosk to your site</p>
             <p className="text-sm text-slate-500">
-              Tablet, Bluetooth barcode scanner, and floor stand shipped to your door — ready to scan helmet QRs in minutes. Includes a 1-hour onboarding call. <span className="font-medium text-slate-700">$499 one-time per site.</span>
+              Tablet, Bluetooth barcode scanner, and floor stand shipped to your door — ready to scan helmet QRs in minutes. Includes a 1-hour onboarding call. <span className="font-medium text-slate-700">$599 one-time per site.</span>
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
@@ -134,7 +134,7 @@ export default async function AttendanceOverviewPage({
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
             >
               <Package className="h-4 w-4" />
-              Order Kiosk Kit — $499
+              Order Kiosk Kit — $599
             </Link>
             <span className="text-xs text-slate-400 text-center sm:text-right">One-time charge, no subscription</span>
           </div>
