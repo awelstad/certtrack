@@ -80,5 +80,33 @@ export async function signUp(
     return { error: 'Account created but sign-in failed. Please go to /login and sign in manually.' }
   }
 
+  // Notify owner of new signup (fire-and-forget)
+  if (process.env.RESEND_API_KEY) {
+    fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Clearwork <onboarding@resend.dev>',
+        to: 'awelstad@gmail.com',
+        subject: `New Clearwork signup: ${company}`,
+        html: `
+          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+            <h2 style="color:#f97316;margin:0 0 16px">New signup!</h2>
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px 0;color:#64748b;font-size:14px">Name</td><td style="padding:8px 0;font-size:14px;font-weight:600">${fullName}</td></tr>
+              <tr><td style="padding:8px 0;color:#64748b;font-size:14px">Email</td><td style="padding:8px 0;font-size:14px">${email}</td></tr>
+              <tr><td style="padding:8px 0;color:#64748b;font-size:14px">Company</td><td style="padding:8px 0;font-size:14px;font-weight:600">${company}</td></tr>
+              <tr><td style="padding:8px 0;color:#64748b;font-size:14px">Time</td><td style="padding:8px 0;font-size:14px">${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' })} CT</td></tr>
+            </table>
+            <p style="margin-top:24px;font-size:13px;color:#94a3b8">They signed up for the free plan. Consider reaching out to offer a demo.</p>
+          </div>
+        `,
+      }),
+    }).catch(() => {}) // never block signup if email fails
+  }
+
   redirect('/dashboard')
 }
