@@ -1,16 +1,23 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { Briefcase, ScanLine, UserCheck, Users, ChevronRight } from 'lucide-react'
+import { Briefcase, ScanLine, UserCheck, Users, ChevronRight, Package, CheckCircle2 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AttendanceOverviewPage() {
+export default async function AttendanceOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ kiosk_kit?: string }>
+}) {
+  const params = await searchParams
+  const kioskOrdered = params.kiosk_kit === 'ordered'
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organization_id')
+    .select('organization_id, role')
     .eq('id', user!.id)
     .single()
 
@@ -55,6 +62,8 @@ export default async function AttendanceOverviewPage() {
 
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
+  const canOrderKit = profile?.role === 'owner' || profile?.role === 'admin'
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <PageHeader
@@ -70,6 +79,20 @@ export default async function AttendanceOverviewPage() {
           </Link>
         }
       />
+
+      {/* Kiosk kit ordered success banner */}
+      {kioskOrdered && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-5 py-4">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+          <div>
+            <p className="font-semibold text-green-800">Kiosk kit ordered!</p>
+            <p className="text-sm text-green-700">
+              You&apos;ll receive a confirmation email with tracking. Once it arrives, use{' '}
+              <Link href="/kiosk" className="underline font-medium">Launch Kiosk</Link> to go live.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Summary banner */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-2">
@@ -92,6 +115,31 @@ export default async function AttendanceOverviewPage() {
           </div>
         </div>
       </div>
+
+      {/* Kiosk kit upsell — admin/owner only */}
+      {canOrderKit && !kioskOrdered && (
+        <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-900">
+            <Package className="h-6 w-6 text-orange-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-slate-900">Add a hardware kiosk to your site</p>
+            <p className="text-sm text-slate-500">
+              Tablet, Bluetooth barcode scanner, and floor stand shipped to your door — ready to scan helmet QRs in minutes. Includes a 1-hour onboarding call. <span className="font-medium text-slate-700">$499 one-time per site.</span>
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+            <Link
+              href="/api/stripe/kiosk-kit"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
+            >
+              <Package className="h-4 w-4" />
+              Order Kiosk Kit — $499
+            </Link>
+            <span className="text-xs text-slate-400 text-center sm:text-right">One-time charge, no subscription</span>
+          </div>
+        </div>
+      )}
 
       {/* Jobs list */}
       {!(jobs ?? []).length ? (
