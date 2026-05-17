@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { ArrowLeft, UserCheck, LogOut, Clock, ScanLine } from 'lucide-react'
+import { ArrowLeft, UserCheck, LogOut, Clock, ScanLine, Pencil } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -187,6 +187,12 @@ export default async function AttendanceDetailPage({
                         <p className="text-sm font-semibold text-green-700">In {timeLabel(checkInTime)}</p>
                         <p className="text-xs text-slate-400">{duration(checkInTime, new Date().toISOString())} ago</p>
                       </div>
+                      <Link
+                        href={`/workers/${worker.id}`}
+                        className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -223,6 +229,12 @@ export default async function AttendanceDetailPage({
                         </p>
                         <p className="text-xs font-semibold text-slate-600">{dur} on site</p>
                       </div>
+                      <Link
+                        href={`/workers/${worker.id}`}
+                        className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Link>
                     </li>
                   ))}
                 </ul>

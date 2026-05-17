@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { logAttendance } from '@/app/actions/attendance'
-import { ScanLine, CheckCircle2, LogOut, Users } from 'lucide-react'
+import { ScanLine, CheckCircle2, LogOut, Users, ShieldCheck, ShieldAlert, ShieldX, Clock } from 'lucide-react'
 
 type ScanState = 'idle' | 'processing' | 'checkin' | 'checkout' | 'error'
+type Compliance = 'green' | 'yellow' | 'red' | 'gray'
 
 interface RecentScan {
   id: number
@@ -35,8 +36,24 @@ const BG: Record<ScanState, string> = {
   idle:       '#0f172a',
   processing: '#0f172a',
   checkin:    '#15803d',
-  checkout:   '#b45309',
-  error:      '#b91c1c',
+  checkout:   '#92400e',
+  error:      '#991b1b',
+}
+
+function ComplianceBadge({ status }: { status: Compliance }) {
+  const cfg = {
+    green:  { Icon: ShieldCheck,  label: 'Cleared',         cls: 'bg-white/20 text-white' },
+    yellow: { Icon: ShieldAlert,  label: 'Expiring Soon',   cls: 'bg-yellow-400/30 text-yellow-100' },
+    red:    { Icon: ShieldX,      label: 'Not Cleared',     cls: 'bg-red-400/30 text-red-100' },
+    gray:   { Icon: Clock,        label: 'No Certs on File', cls: 'bg-white/10 text-white/60' },
+  }[status]
+
+  return (
+    <div className={`mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold ${cfg.cls}`}>
+      <cfg.Icon className="h-4 w-4" />
+      {cfg.label}
+    </div>
+  )
 }
 
 export function KioskScanner({
@@ -47,27 +64,27 @@ export function KioskScanner({
   initialOnSiteCount,
   initialRecentScans,
 }: Props) {
-  const inputRef    = useRef<HTMLInputElement>(null)
+  const inputRef      = useRef<HTMLInputElement>(null)
   const processingRef = useRef(false)
-  const scanIdRef   = useRef(0)
+  const scanIdRef     = useRef(0)
 
-  const [scanState,  setScanState]  = useState<ScanState>('idle')
-  const [lastWorker, setLastWorker] = useState<{ name: string; photo: string | null; trade: string | null } | null>(null)
-  const [scanTime,   setScanTime]   = useState<Date | null>(null)
-  const [errorMsg,   setErrorMsg]   = useState('')
+  const [scanState,   setScanState]   = useState<ScanState>('idle')
+  const [lastWorker,  setLastWorker]  = useState<{ name: string; photo: string | null; trade: string | null } | null>(null)
+  const [scanTime,    setScanTime]    = useState<Date | null>(null)
+  const [compliance,  setCompliance]  = useState<Compliance>('gray')
+  const [timeOnSite,  setTimeOnSite]  = useState<string | null>(null)
+  const [errorMsg,    setErrorMsg]    = useState('')
   const [onSiteCount, setOnSiteCount] = useState(initialOnSiteCount)
   const [recentScans, setRecentScans] = useState<RecentScan[]>(
     initialRecentScans.map((s, i) => ({ ...s, id: i, time: new Date(s.time) }))
   )
   const [now, setNow] = useState(new Date())
 
-  // Clock
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
 
-  // Re-focus hidden input on any tap/click
   const refocus = useCallback(() => inputRef.current?.focus(), [])
   useEffect(() => {
     document.addEventListener('touchstart', refocus)
@@ -78,16 +95,16 @@ export function KioskScanner({
     }
   }, [refocus])
 
-  // Auto-reset to idle after 3 s
   useEffect(() => {
     if (scanState === 'idle' || scanState === 'processing') return
     const t = setTimeout(() => {
       setScanState('idle')
       setLastWorker(null)
-      setErrorMsg('')
       setScanTime(null)
+      setTimeOnSite(null)
+      setErrorMsg('')
       inputRef.current?.focus()
-    }, 3500)
+    }, 4000)
     return () => clearTimeout(t)
   }, [scanState])
 
@@ -95,14 +112,12 @@ export function KioskScanner({
     if (processingRef.current) return
     processingRef.current = true
 
-    // Parse public_id from full URL or treat as raw public_id
-    const match = raw.match(/\/qr\/([^/?#\s]+)/)
+    const match    = raw.match(/\/qr\/([^/?#\s]+)/)
     const publicId = match?.[1] ?? raw
 
     setScanState('processing')
 
     const result = await logAttendance(publicId, jobId)
-
     processingRef.current = false
 
     if (result.error) {
@@ -114,36 +129,34 @@ export function KioskScanner({
     const ts = new Date()
     setScanTime(ts)
     setLastWorker(result.worker!)
+    setCompliance(result.compliance ?? 'gray')
+    setTimeOnSite(result.timeOnSite ?? null)
     setScanState(result.event === 'check_in' ? 'checkin' : 'checkout')
     setOnSiteCount((prev) =>
       result.event === 'check_in' ? prev + 1 : Math.max(0, prev - 1)
     )
-    setRecentScans((prev) => {
-      const next: RecentScan = {
-        id:    ++scanIdRef.current,
-        name:  result.worker!.name,
-        event: result.event!,
-        time:  ts,
-        photo: result.worker!.photo,
-        trade: result.worker!.trade,
-      }
-      return [next, ...prev].slice(0, 8)
-    })
+    setRecentScans((prev) => [{
+      id:    ++scanIdRef.current,
+      name:  result.worker!.name,
+      event: result.event!,
+      time:  ts,
+      photo: result.worker!.photo,
+      trade: result.worker!.trade,
+    }, ...prev].slice(0, 8))
   }
 
-  const bgColor = BG[scanState]
-
+  const bgColor  = BG[scanState]
   const initials = (name: string) =>
     name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
 
   return (
     <div
       className="relative flex min-h-screen flex-col select-none"
-      style={{ backgroundColor: bgColor, transition: 'background-color 0.5s ease' }}
+      style={{ backgroundColor: bgColor, transition: 'background-color 0.4s ease' }}
     >
-      {/* ── Header ──────────────────────────────────────── */}
+      {/* ── Header ─────────────────────────────────────── */}
       <header className="flex shrink-0 items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-3">
+        <div>
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logoUrl} alt={orgName} className="h-8 object-contain" />
@@ -159,7 +172,7 @@ export function KioskScanner({
         </div>
       </header>
 
-      {/* ── Main area ────────────────────────────────────── */}
+      {/* ── Main ───────────────────────────────────────── */}
       <main className="flex flex-1 flex-col items-center justify-center px-6 py-8">
 
         {/* IDLE */}
@@ -186,22 +199,28 @@ export function KioskScanner({
         {scanState === 'processing' && (
           <div className="flex flex-col items-center gap-5">
             <div className="h-20 w-20 animate-spin rounded-full border-4 border-white/20 border-t-white" />
-            <p className="text-2xl font-semibold text-white">Checking in…</p>
+            <p className="text-2xl font-semibold text-white">Looking up worker…</p>
           </div>
         )}
 
-        {/* CHECK IN / CHECK OUT */}
-        {(scanState === 'checkin' || scanState === 'checkout') && lastWorker && (
+        {/* CHECK IN */}
+        {scanState === 'checkin' && lastWorker && (
           <div className="flex flex-col items-center text-center">
+            {/* Big clear label at top */}
+            <div className="mb-6 flex items-center gap-3 rounded-2xl bg-white/20 px-8 py-4">
+              <CheckCircle2 className="h-8 w-8 text-white" />
+              <span className="text-4xl font-black tracking-wide text-white">CHECKED IN</span>
+            </div>
+
             {lastWorker.photo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={lastWorker.photo}
                 alt={lastWorker.name}
-                className="mb-6 h-32 w-32 rounded-full border-4 border-white/30 object-cover shadow-2xl"
+                className="mb-5 h-28 w-28 rounded-full border-4 border-white/30 object-cover shadow-2xl"
               />
             ) : (
-              <div className="mb-6 flex h-32 w-32 items-center justify-center rounded-full border-4 border-white/30 bg-white/20 text-5xl font-bold text-white shadow-2xl">
+              <div className="mb-5 flex h-28 w-28 items-center justify-center rounded-full border-4 border-white/30 bg-white/20 text-4xl font-black text-white shadow-2xl">
                 {initials(lastWorker.name)}
               </div>
             )}
@@ -211,22 +230,53 @@ export function KioskScanner({
               <p className="mt-2 text-xl text-white/60">{lastWorker.trade}</p>
             )}
 
-            <div className="mt-7 flex items-center gap-3 rounded-full bg-white/20 px-10 py-4 shadow-lg">
-              {scanState === 'checkin' ? (
-                <>
-                  <CheckCircle2 className="h-7 w-7 text-white" />
-                  <span className="text-3xl font-bold text-white">Checked In</span>
-                </>
-              ) : (
-                <>
-                  <LogOut className="h-7 w-7 text-white" />
-                  <span className="text-3xl font-bold text-white">Checked Out</span>
-                </>
-              )}
-            </div>
+            <ComplianceBadge status={compliance} />
 
             {scanTime && (
-              <p className="mt-4 text-lg text-white/50">
+              <p className="mt-3 text-white/40">
+                {scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* CHECK OUT */}
+        {scanState === 'checkout' && lastWorker && (
+          <div className="flex flex-col items-center text-center">
+            {/* Big clear label at top */}
+            <div className="mb-6 flex items-center gap-3 rounded-2xl bg-white/20 px-8 py-4">
+              <LogOut className="h-8 w-8 text-white" />
+              <span className="text-4xl font-black tracking-wide text-white">CHECKED OUT</span>
+            </div>
+
+            {lastWorker.photo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={lastWorker.photo}
+                alt={lastWorker.name}
+                className="mb-5 h-28 w-28 rounded-full border-4 border-white/30 object-cover shadow-2xl"
+              />
+            ) : (
+              <div className="mb-5 flex h-28 w-28 items-center justify-center rounded-full border-4 border-white/30 bg-white/20 text-4xl font-black text-white shadow-2xl">
+                {initials(lastWorker.name)}
+              </div>
+            )}
+
+            <p className="text-5xl font-bold text-white leading-tight">{lastWorker.name}</p>
+            {lastWorker.trade && (
+              <p className="mt-2 text-xl text-white/60">{lastWorker.trade}</p>
+            )}
+
+            {timeOnSite && (
+              <div className="mt-4 rounded-full bg-white/20 px-6 py-2">
+                <p className="text-lg font-bold text-white">{timeOnSite}</p>
+              </div>
+            )}
+
+            <ComplianceBadge status={compliance} />
+
+            {scanTime && (
+              <p className="mt-3 text-white/40">
                 {scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </p>
             )}
@@ -245,12 +295,10 @@ export function KioskScanner({
         )}
       </main>
 
-      {/* ── Recent scans (only when idle) ────────────────── */}
+      {/* ── Recent scans (idle only) ────────────────────── */}
       {scanState === 'idle' && recentScans.length > 0 && (
         <div className="shrink-0 border-t border-white/10 px-5 py-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/30">
-            Recent scans
-          </p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/30">Recent</p>
           <ul className="space-y-2">
             {recentScans.slice(0, 5).map((s) => (
               <li key={s.id} className="flex items-center gap-3">
@@ -262,8 +310,7 @@ export function KioskScanner({
                     {initials(s.name)}
                   </div>
                 )}
-                <span className="flex-1 text-sm font-medium text-white/60 truncate">{s.name}</span>
-                {s.trade && <span className="hidden text-xs text-white/30 sm:block truncate max-w-[120px]">{s.trade}</span>}
+                <span className="flex-1 truncate text-sm font-medium text-white/60">{s.name}</span>
                 <span className={`shrink-0 text-xs font-bold ${s.event === 'check_in' ? 'text-green-400' : 'text-amber-400'}`}>
                   {s.event === 'check_in' ? 'IN' : 'OUT'}
                 </span>
@@ -276,7 +323,7 @@ export function KioskScanner({
         </div>
       )}
 
-      {/* ── Hidden always-focused scan input ─────────────── */}
+      {/* ── Hidden scan input ───────────────────────────── */}
       <input
         ref={inputRef}
         autoFocus
