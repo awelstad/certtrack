@@ -12,6 +12,7 @@ export default async function AttendanceOverviewPage({
 }) {
   const params = await searchParams
   const kioskOrdered = params.kiosk_kit === 'ordered'
+  const kioskError = params.kiosk_kit === 'error' || params.kiosk_kit === 'unavailable'
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -80,6 +81,20 @@ export default async function AttendanceOverviewPage({
         }
       />
 
+      {/* Kiosk kit error banner */}
+      {kioskError && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4">
+          <span className="mt-0.5 text-red-500 text-lg leading-none">!</span>
+          <div>
+            <p className="font-semibold text-red-800">Checkout couldn&apos;t be started</p>
+            <p className="text-sm text-red-700">
+              Something went wrong. Please try again or contact{' '}
+              <a href="mailto:support@clearworkers.com" className="underline font-medium">support@clearworkers.com</a>.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Kiosk kit ordered success banner */}
       {kioskOrdered && (
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-5 py-4">
@@ -129,13 +144,13 @@ export default async function AttendanceOverviewPage({
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
-            <Link
+            <a
               href="/api/stripe/kiosk-kit"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
             >
               <Package className="h-4 w-4" />
               Order Kiosk Kit — $599
-            </Link>
+            </a>
             <span className="text-xs text-slate-400 text-center sm:text-right">One-time charge, no subscription</span>
           </div>
         </div>
