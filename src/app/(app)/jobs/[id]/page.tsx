@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/Badge'
-import { ArrowLeft, Award, ShieldCheck, MapPin, QrCode } from 'lucide-react'
+import { ArrowLeft, Award, ShieldCheck, MapPin, QrCode, HardHat } from 'lucide-react'
 import type { JobStatus } from '@/lib/types'
 
 const statusVariant: Record<JobStatus, 'green' | 'slate' | 'red' | 'yellow'> = {
@@ -99,6 +99,19 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           <div>
             <p className="font-semibold text-slate-900">Site Orientation</p>
             <p className="text-sm text-slate-500">QR video + safety quiz</p>
+          </div>
+        </Link>
+
+        <Link
+          href={`/jobs/${id}/subs`}
+          className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:bg-slate-50"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50">
+            <HardHat className="h-5 w-5 text-purple-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-slate-900">Subcontractors</p>
+            <p className="text-sm text-slate-500">Invite & manage subs</p>
           </div>
         </Link>
       </div>

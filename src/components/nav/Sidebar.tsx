@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Smartphone,
   Upload,
+  HardHat,
 } from 'lucide-react'
 import { JobFilterSelect } from './JobFilterSelect'
 import { OrgSwitcher } from './OrgSwitcher'
@@ -35,7 +36,6 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/workers', label: 'Workers', icon: Users },
-  { href: '/workers/import', label: 'Import Workers', icon: Upload },
   { href: '/certifications', label: 'Certifications', icon: Award },
   { href: '/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/jha', label: 'JHA', icon: AlertTriangle },
@@ -46,10 +46,15 @@ const navItems: NavItem[] = [
 
 const adminItems: NavItem[] = [
   { href: '/admin/branding', label: 'Settings', icon: Settings, adminOnly: true },
+  { href: '/workers/import', label: 'Import Workers', icon: Upload, adminOnly: true },
   { href: '/admin/install', label: 'Install App', icon: Smartphone, adminOnly: true },
 ]
 
 const adminRoles: Role[] = ['owner', 'admin']
+
+const subNavItems: NavItem[] = [
+  { href: '/sub-portal', label: 'My Workers', icon: HardHat },
+]
 
 type Props = {
   profile: {
@@ -118,7 +123,7 @@ export function Sidebar({ profile, jobs, selectedJobId, org, allOrgs, activeOrgI
       {/* Navigation */}
       <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
-          {navItems.map((item) => {
+          {(profile.role === 'subcontractor_admin' ? subNavItems : navItems).map((item) => {
             const active = isActive(item.href)
             return (
               <li key={item.href}>
