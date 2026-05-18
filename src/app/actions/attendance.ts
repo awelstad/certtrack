@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateWorkerOverallStatus } from '@/lib/certifications'
 import type { CertStatus } from '@/lib/types'
 
@@ -12,9 +13,13 @@ export async function logAttendance(
 ): Promise<{
   error?: string
   worker?: { name: string; photo: string | null; trade: string | null }
+  workerId?: string
   event?: 'check_in' | 'check_out'
   compliance?: 'green' | 'yellow' | 'red' | 'gray'
   timeOnSite?: string | null
+  isNewToJob?: boolean
+  previousJobId?: string | null
+  previousJobName?: string | null
 }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -39,7 +44,6 @@ export async function logAttendance(
   const todayStart = new Date()
   todayStart.setUTCHours(0, 0, 0, 0)
 
-  // Get last event (with timestamp for cooldown), certs, and today's full timeline in parallel
   const [{ data: lastRow }, { data: certs }, { data: todayEvents }] = await Promise.all([
     supabase
       .from('site_attendance')
@@ -75,7 +79,6 @@ export async function logAttendance(
   const event: 'check_in' | 'check_out' =
     lastRow?.event === 'check_in' ? 'check_out' : 'check_in'
 
-  // Time on site for check-out: find last check_in
   let timeOnSite: string | null = null
   if (event === 'check_out') {
     const lastCheckIn = [...(todayEvents ?? [])].reverse().find((e) => e.event === 'check_in')
@@ -103,14 +106,53 @@ export async function logAttendance(
     (certs ?? []).map((c) => ({ status: c.status as CertStatus, expiry_date: c.expiry_date }))
   )
 
+  // ── Job roster check ──────────────────────────────────────────────────────
+  const admin = createAdminClient()
+
+  const [{ data: thisJobEntry }, { data: otherJobEntries }] = await Promise.all([
+    admin
+      .from('job_workers')
+      .select('id')
+      .eq('job_id', jobId)
+      .eq('worker_id', worker.id)
+      .maybeSingle(),
+    admin
+      .from('job_workers')
+      .select('job_id, jobs(name)')
+      .eq('worker_id', worker.id)
+      .neq('job_id', jobId)
+      .order('added_at', { ascending: false })
+      .limit(1),
+  ])
+
+  let isNewToJob = false
+  let previousJobId: string | null = null
+  let previousJobName: string | null = null
+
+  if (!thisJobEntry) {
+    if (otherJobEntries && otherJobEntries.length > 0) {
+      // Has another job assignment — return info so kiosk can show transfer modal
+      isNewToJob = true
+      previousJobId = otherJobEntries[0].job_id
+      previousJobName = (otherJobEntries[0].jobs as { name: string } | null)?.name ?? null
+    } else {
+      // No assignment anywhere — quietly add to this job
+      await admin.from('job_workers').insert({ job_id: jobId, worker_id: worker.id })
+    }
+  }
+
   return {
     worker: {
       name:  `${worker.first_name} ${worker.last_name}`,
       photo: worker.avatar_url ?? null,
       trade: worker.trade ?? null,
     },
+    workerId: worker.id,
     event,
     compliance,
     timeOnSite,
+    isNewToJob,
+    previousJobId,
+    previousJobName,
   }
 }

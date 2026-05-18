@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/Badge'
-import { ArrowLeft, Award, ShieldCheck, MapPin, QrCode, HardHat, ScanLine, Pencil, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Award, ShieldCheck, MapPin, QrCode, HardHat, ScanLine, Pencil, CheckCircle2, Users } from 'lucide-react'
 import type { JobStatus, Role } from '@/lib/types'
 
 const EDIT_ROLES: Role[] = ['platform_admin', 'owner', 'admin', 'pm', 'superintendent']
@@ -153,6 +153,19 @@ export default async function JobDetailPage({
           <div>
             <p className="font-semibold text-slate-900">Site Kiosk</p>
             <p className="text-sm text-slate-500">Set up tablet check-in accounts</p>
+          </div>
+        </Link>
+
+        <Link
+          href={`/jobs/${id}/workers`}
+          className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:bg-slate-50"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50">
+            <Users className="h-5 w-5 text-orange-500" />
+          </div>
+          <div>
+            <p className="font-semibold text-slate-900">Job Roster</p>
+            <p className="text-sm text-slate-500">Manage workers assigned to this site</p>
           </div>
         </Link>
       </div>

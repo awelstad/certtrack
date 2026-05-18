@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { logAttendance } from '@/app/actions/attendance'
-import { ScanLine, CheckCircle2, LogOut, Users, ShieldCheck, ShieldAlert, ShieldX, Clock, ClipboardCheck } from 'lucide-react'
+import { confirmJobTransfer } from '@/app/actions/jobWorkers'
+import { ScanLine, CheckCircle2, LogOut, Users, ShieldCheck, ShieldAlert, ShieldX, Clock, ClipboardCheck, ArrowRightLeft } from 'lucide-react'
 
 type ScanState = 'idle' | 'processing' | 'checkin' | 'checkout' | 'error'
 type Compliance = 'green' | 'yellow' | 'red' | 'gray'
@@ -19,6 +20,14 @@ interface RecentScan {
   orientationOk: boolean
   jhaOk: boolean
   compliance: Compliance
+}
+
+interface TransferPending {
+  workerId: string
+  prevJobId: string
+  prevJobName: string
+  workerName: string
+  photo: string | null
 }
 
 interface Props {
@@ -95,22 +104,24 @@ export function KioskScanner({
   initialOnSiteCount,
   initialRecentScans,
 }: Props) {
-  const router      = useRouter()
-  const inputRef    = useRef<HTMLInputElement>(null)
+  const router        = useRouter()
+  const inputRef      = useRef<HTMLInputElement>(null)
   const processingRef = useRef(false)
-  const scanIdRef   = useRef(0)
+  const scanIdRef     = useRef(0)
 
-  const [scanState,   setScanState]   = useState<ScanState>('idle')
-  const [lastWorker,  setLastWorker]  = useState<{ name: string; photo: string | null; trade: string | null } | null>(null)
-  const [scanTime,    setScanTime]    = useState<Date | null>(null)
-  const [compliance,  setCompliance]  = useState<Compliance>('gray')
-  const [timeOnSite,  setTimeOnSite]  = useState<string | null>(null)
-  const [errorMsg,    setErrorMsg]    = useState('')
-  const [onSiteCount, setOnSiteCount] = useState(initialOnSiteCount)
-  const [recentScans, setRecentScans] = useState<RecentScan[]>(
+  const [scanState,      setScanState]      = useState<ScanState>('idle')
+  const [lastWorker,     setLastWorker]     = useState<{ name: string; photo: string | null; trade: string | null } | null>(null)
+  const [scanTime,       setScanTime]       = useState<Date | null>(null)
+  const [compliance,     setCompliance]     = useState<Compliance>('gray')
+  const [timeOnSite,     setTimeOnSite]     = useState<string | null>(null)
+  const [errorMsg,       setErrorMsg]       = useState('')
+  const [onSiteCount,    setOnSiteCount]    = useState(initialOnSiteCount)
+  const [recentScans,    setRecentScans]    = useState<RecentScan[]>(
     initialRecentScans.map((s, i) => ({ ...s, id: i, time: new Date(s.time) }))
   )
-  const [now, setNow] = useState(new Date())
+  const [now,            setNow]            = useState(new Date())
+  const [transferPending, setTransferPending] = useState<TransferPending | null>(null)
+  const [transferring,   setTransferring]   = useState(false)
 
   // Clock tick
   useEffect(() => {
@@ -118,7 +129,7 @@ export function KioskScanner({
     return () => clearInterval(t)
   }, [])
 
-  // Auto-refresh server data every 60 seconds (re-runs server component)
+  // Auto-refresh server data every 60 seconds
   useEffect(() => {
     const t = setInterval(() => router.refresh(), 60_000)
     return () => clearInterval(t)
@@ -130,7 +141,11 @@ export function KioskScanner({
     setRecentScans(initialRecentScans.map((s, i) => ({ ...s, id: i, time: new Date(s.time) })))
   }, [initialOnSiteCount, initialRecentScans])
 
-  const refocus = useCallback(() => inputRef.current?.focus(), [])
+  const refocus = useCallback(() => {
+    // Don't steal focus while transfer modal is open
+    if (!transferPending) inputRef.current?.focus()
+  }, [transferPending])
+
   useEffect(() => {
     document.addEventListener('touchstart', refocus)
     document.addEventListener('click', refocus)
@@ -140,8 +155,10 @@ export function KioskScanner({
     }
   }, [refocus])
 
+  // Auto-dismiss result card — paused while transfer modal is showing
   useEffect(() => {
     if (scanState === 'idle' || scanState === 'processing') return
+    if (transferPending) return
     const t = setTimeout(() => {
       setScanState('idle')
       setLastWorker(null)
@@ -151,7 +168,7 @@ export function KioskScanner({
       inputRef.current?.focus()
     }, 4000)
     return () => clearTimeout(t)
-  }, [scanState])
+  }, [scanState, transferPending])
 
   async function handleScan(raw: string) {
     if (processingRef.current) return
@@ -182,7 +199,7 @@ export function KioskScanner({
     )
     setRecentScans((prev) => [{
       id:            ++scanIdRef.current,
-      workerId:      '',
+      workerId:      result.workerId ?? '',
       name:          result.worker!.name,
       event:         result.event!,
       time:          ts,
@@ -192,6 +209,34 @@ export function KioskScanner({
       jhaOk:         false,
       compliance:    result.compliance ?? 'gray',
     }, ...prev].slice(0, 8))
+
+    // Show transfer modal if worker is assigned to a different job
+    if (result.isNewToJob && result.previousJobId && result.workerId) {
+      setTransferPending({
+        workerId:    result.workerId,
+        prevJobId:   result.previousJobId,
+        prevJobName: result.previousJobName ?? 'another site',
+        workerName:  result.worker!.name,
+        photo:       result.worker!.photo,
+      })
+    }
+  }
+
+  async function handleConfirmTransfer() {
+    if (!transferPending) return
+    setTransferring(true)
+    await confirmJobTransfer({
+      workerId:  transferPending.workerId,
+      fromJobId: transferPending.prevJobId,
+      toJobId:   jobId,
+    })
+    setTransferring(false)
+    setTransferPending(null)
+    // Now let the normal 4s dismiss run
+  }
+
+  function handleSkipTransfer() {
+    setTransferPending(null)
   }
 
   const bgColor  = BG[scanState]
@@ -203,6 +248,65 @@ export function KioskScanner({
       className="relative flex min-h-screen flex-col select-none"
       style={{ backgroundColor: bgColor, transition: 'background-color 0.4s ease' }}
     >
+      {/* ── Transfer confirmation modal ───────────────── */}
+      {transferPending && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-6">
+          <div className="w-full max-w-sm rounded-2xl bg-slate-800 border border-white/10 overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="bg-blue-600 px-6 py-4 flex items-center gap-3">
+              <ArrowRightLeft className="h-6 w-6 text-white shrink-0" />
+              <div>
+                <p className="font-black text-white text-lg leading-tight">Job Transfer</p>
+                <p className="text-blue-200 text-sm">Confirm roster update</p>
+              </div>
+            </div>
+
+            {/* Worker */}
+            <div className="px-6 py-5 flex flex-col items-center text-center">
+              {transferPending.photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={transferPending.photo} alt={transferPending.workerName}
+                  className="h-20 w-20 rounded-full object-cover border-4 border-white/20 mb-3" />
+              ) : (
+                <div className="h-20 w-20 rounded-full bg-white/10 flex items-center justify-center text-3xl font-black text-white border-4 border-white/20 mb-3">
+                  {initials(transferPending.workerName)}
+                </div>
+              )}
+              <p className="text-2xl font-bold text-white">{transferPending.workerName}</p>
+
+              <div className="mt-4 w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-left space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Currently assigned to</span>
+                  <span className="font-semibold text-red-300">{transferPending.prevJobName}</span>
+                </div>
+                <div className="border-t border-white/10" />
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Transfer to</span>
+                  <span className="font-semibold text-green-300">{jobName}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 pb-6 flex flex-col gap-3">
+              <button
+                onClick={handleConfirmTransfer}
+                disabled={transferring}
+                className="w-full rounded-xl bg-green-500 py-4 text-lg font-black text-white hover:bg-green-400 transition-colors disabled:opacity-50"
+              >
+                {transferring ? 'Transferring…' : 'Yes, Transfer'}
+              </button>
+              <button
+                onClick={handleSkipTransfer}
+                className="w-full rounded-xl bg-white/10 py-3 text-base font-semibold text-white/70 hover:bg-white/20 transition-colors"
+              >
+                Skip — just visiting
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Header ─────────────────────────────────────── */}
       <header className="flex shrink-0 items-center justify-between px-6 py-4">
         <div>
@@ -236,7 +340,6 @@ export function KioskScanner({
             <p className="text-4xl font-bold text-white">Scan your QR code</p>
             <p className="mt-3 text-lg text-white/50">Hold your helmet badge up to the scanner</p>
 
-            {/* On-site count — tappable link to workers panel */}
             <a
               href={`/kiosk/${jobId}/workers`}
               className="mt-8 flex items-center gap-2.5 rounded-full bg-white/10 px-6 py-3 hover:bg-white/20 transition-colors"

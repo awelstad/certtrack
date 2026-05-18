@@ -352,5 +352,21 @@ export async function completeOrientationWithPass(data: {
     .eq('worker_id', user.id)
     .eq('orientation_id', data.orientationId)
 
+  // Auto-add to job roster when passing orientation
+  if (data.passed) {
+    const { data: workerRecord } = await admin
+      .from('workers')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .eq('organization_id', data.organizationId)
+      .maybeSingle()
+
+    if (workerRecord) {
+      await admin
+        .from('job_workers')
+        .upsert({ job_id: data.jobId, worker_id: workerRecord.id }, { onConflict: 'job_id,worker_id', ignoreDuplicates: true })
+    }
+  }
+
   return { passId: data.passed ? passId : undefined }
 }
