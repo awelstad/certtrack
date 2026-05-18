@@ -25,6 +25,7 @@ import {
   ScanLine,
   UserCheck,
   BookOpen,
+  CreditCard,
 } from 'lucide-react'
 import { JobFilterSelect } from './JobFilterSelect'
 import { OrgSwitcher } from './OrgSwitcher'
@@ -49,11 +50,12 @@ const navItems: NavItem[] = [
 ]
 
 const settingsItems: NavItem[] = [
-  { href: '/admin/branding', label: 'General Settings', icon: Settings },
-  { href: '/workers/import', label: 'Import Workers',   icon: Upload },
-  { href: '/admin/install',  label: 'Install App',      icon: Smartphone },
-  { href: '/help',           label: 'Help & Guide',     icon: HelpCircle },
-  { href: '/admin/guide',    label: 'Setup Guide',      icon: BookOpen },
+  { href: '/admin/branding',      label: 'General Settings', icon: Settings },
+  { href: '/admin/subscription',  label: 'Subscription',     icon: CreditCard },
+  { href: '/workers/import',      label: 'Import Workers',   icon: Upload },
+  { href: '/admin/install',       label: 'Install App',      icon: Smartphone },
+  { href: '/help',                label: 'Help & Guide',     icon: HelpCircle },
+  { href: '/admin/guide',         label: 'Setup Guide',      icon: BookOpen },
 ]
 
 const settingsRoots = settingsItems.map(i => i.href)
