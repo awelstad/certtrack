@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { calculateWorkerOverallStatus } from '@/lib/certifications'
 import type { CertStatus } from '@/lib/types'
 
+const SCAN_COOLDOWN_MS = 5_000
+
 export async function logAttendance(
   publicId: string,
   jobId: string
@@ -37,11 +39,11 @@ export async function logAttendance(
   const todayStart = new Date()
   todayStart.setUTCHours(0, 0, 0, 0)
 
-  // Get last event + compliance certs in parallel
+  // Get last event (with timestamp for cooldown), certs, and today's full timeline in parallel
   const [{ data: lastRow }, { data: certs }, { data: todayEvents }] = await Promise.all([
     supabase
       .from('site_attendance')
-      .select('event')
+      .select('event, scanned_at')
       .eq('worker_id', worker.id)
       .eq('job_id', jobId)
       .gte('scanned_at', todayStart.toISOString())
@@ -61,10 +63,19 @@ export async function logAttendance(
       .order('scanned_at', { ascending: true }),
   ])
 
+  // 5-second cooldown — prevents accidental double-scan
+  if (lastRow?.scanned_at) {
+    const msSinceLast = Date.now() - new Date(lastRow.scanned_at).getTime()
+    if (msSinceLast < SCAN_COOLDOWN_MS) {
+      const secsLeft = Math.ceil((SCAN_COOLDOWN_MS - msSinceLast) / 1000)
+      return { error: `Already scanned — please wait ${secsLeft}s before scanning again` }
+    }
+  }
+
   const event: 'check_in' | 'check_out' =
     lastRow?.event === 'check_in' ? 'check_out' : 'check_in'
 
-  // Time on site for check-out: find last check_in before this check_out
+  // Time on site for check-out: find last check_in
   let timeOnSite: string | null = null
   if (event === 'check_out') {
     const lastCheckIn = [...(todayEvents ?? [])].reverse().find((e) => e.event === 'check_in')
