@@ -31,11 +31,12 @@ export default async function WorkerCertsPage() {
 
   const admin = createAdminClient()
 
-  const { data: worker } = await admin
-    .from('workers')
-    .select('id')
-    .eq('auth_user_id', user.id)
-    .maybeSingle()
+  const [{ data: worker }, { data: org }] = await Promise.all([
+    admin.from('workers').select('id').eq('auth_user_id', user.id).maybeSingle(),
+    admin.from('organizations').select('workers_can_upload_certs').eq('id', profile.organization_id).single(),
+  ])
+
+  const uploadEnabled = org?.workers_can_upload_certs ?? true
 
   // Fetch certs and cert types in parallel
   const [{ data: certs }, { data: certTypes }] = await Promise.all([
@@ -46,11 +47,13 @@ export default async function WorkerCertsPage() {
           .eq('worker_id', worker.id)
           .order('created_at', { ascending: false })
       : Promise.resolve({ data: [] }),
-    admin
-      .from('certification_types')
-      .select('id, name, validity_days')
-      .eq('organization_id', profile.organization_id)
-      .order('name'),
+    uploadEnabled && worker
+      ? admin
+          .from('certification_types')
+          .select('id, name, validity_days')
+          .eq('organization_id', profile.organization_id)
+          .order('name')
+      : Promise.resolve({ data: [] }),
   ])
 
   type CertRow = {
@@ -75,7 +78,7 @@ export default async function WorkerCertsPage() {
 
       <div className="px-4 py-5 max-w-lg mx-auto space-y-5">
         {/* Upload form */}
-        {worker && (
+        {worker && uploadEnabled && (
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <Plus className="h-4 w-4 text-orange-500" />

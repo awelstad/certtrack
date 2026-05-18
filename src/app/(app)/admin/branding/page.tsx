@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { BrandingForm } from './BrandingForm'
+import { WorkerPortalSettings } from './WorkerPortalSettings'
 import type { Role } from '@/lib/types'
 
 export default async function AdminBrandingPage() {
@@ -18,7 +19,7 @@ export default async function AdminBrandingPage() {
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('id, name, slug, logo_url, brand_color')
+    .select('id, name, slug, logo_url, brand_color, workers_can_upload_certs')
     .eq('id', profile!.organization_id)
     .single()
 
@@ -30,13 +31,20 @@ export default async function AdminBrandingPage() {
         title="Settings"
         description="Customize your organization's logo, name, and brand color."
       />
-      <BrandingForm
-        orgId={org.id}
-        initialName={org.name}
-        initialSlug={org.slug}
-        initialLogoUrl={org.logo_url ?? null}
-        initialBrandColor={org.brand_color ?? null}
-      />
+      <div className="space-y-6">
+        <BrandingForm
+          orgId={org.id}
+          initialName={org.name}
+          initialSlug={org.slug}
+          initialLogoUrl={org.logo_url ?? null}
+          initialBrandColor={org.brand_color ?? null}
+        />
+        <div className="max-w-xl">
+          <WorkerPortalSettings
+            initialWorkersCanUploadCerts={org.workers_can_upload_certs ?? true}
+          />
+        </div>
+      </div>
     </div>
   )
 }
