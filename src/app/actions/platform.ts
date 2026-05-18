@@ -208,6 +208,65 @@ export async function inviteUserToOrg(
   return { success: true }
 }
 
+export async function updateUserProfile(
+  userId: string,
+  orgId: string,
+  data: { full_name?: string; role?: string }
+): Promise<{ error?: string }> {
+  const auth = await getPlatformAdmin()
+  if ('error' in auth) return { error: auth.error }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('profiles').update(data).eq('id', userId).eq('organization_id', orgId)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/super-admin/orgs/${orgId}`)
+  return {}
+}
+
+export async function sendPasswordResetEmail(userEmail: string): Promise<{ error?: string }> {
+  const auth = await getPlatformAdmin()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/auth/callback?next=/dashboard`,
+  })
+  if (error) return { error: error.message }
+  return {}
+}
+
+export async function removeUserFromOrg(userId: string, orgId: string): Promise<{ error?: string }> {
+  const auth = await getPlatformAdmin()
+  if ('error' in auth) return { error: auth.error }
+
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.deleteUser(userId)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/super-admin/orgs/${orgId}`)
+  revalidatePath('/super-admin')
+  return {}
+}
+
+export async function setHomeOrg(orgId: string): Promise<{ error?: string }> {
+  const auth = await getPlatformAdmin()
+  if ('error' in auth) return { error: auth.error }
+
+  const userId = await getCallerUserId()
+  if (!userId) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('profiles')
+    .update({ organization_id: orgId, home_org_id: null })
+    .eq('id', userId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/', 'layout')
+  return {}
+}
+
 export async function updateOrgPlan(orgId: string, plan: string): Promise<{ error?: string }> {
   const auth = await getPlatformAdmin()
   if ('error' in auth) return { error: auth.error }

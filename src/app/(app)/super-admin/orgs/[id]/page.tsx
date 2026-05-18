@@ -6,6 +6,8 @@ import { ArrowLeft, Users, HardHat, Briefcase, Wrench, ShieldCheck } from 'lucid
 import { EditOrgNameForm } from './EditOrgNameForm'
 import { InviteUserForm } from './InviteUserForm'
 import { DeleteOrgButton } from './DeleteOrgButton'
+import { UserManagementTable } from './UserManagementTable'
+import { SetHomeOrgButton } from './SetHomeOrgButton'
 
 export default async function OrgDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -16,7 +18,6 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
 
   const admin = createAdminClient()
 
-  // Use admin client so org-scoped RLS never blocks reading our own profile
   const { data: myProfile } = await admin
     .from('profiles')
     .select('is_platform_admin')
@@ -33,19 +34,16 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
 
   if (!org) notFound()
 
-  // Fetch profiles for this org
   const { data: profiles } = await admin
     .from('profiles')
     .select('id, full_name, role, created_at')
     .eq('organization_id', id)
     .order('created_at', { ascending: true })
 
-  // Get emails from auth — guard against null data
   const listResult = await admin.auth.admin.listUsers({ perPage: 1000 })
   const authUsers = listResult.data?.users ?? []
   const emailMap = new Map(authUsers.map((u) => [u.id, u.email ?? '']))
 
-  // Stats counts
   const [
     { count: workerCount },
     { count: jobCount },
@@ -65,15 +63,13 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
     { label: 'Toolbox Talks',   value: toolboxCount   ?? 0, icon: ShieldCheck },
   ]
 
-  const roleLabel: Record<string, string> = {
-    owner:               'Owner',
-    admin:               'Admin',
-    pm:                  'Project Manager',
-    superintendent:      'Superintendent',
-    worker:              'Worker',
-    subcontractor_admin: 'Subcontractor Admin',
-    gc_read_only:        'GC Read-Only',
-  }
+  const userRows = (profiles ?? []).map((p) => ({
+    id:        p.id,
+    full_name: p.full_name,
+    email:     emailMap.get(p.id) ?? '—',
+    role:      p.role,
+    joined:    new Date(p.created_at).toLocaleDateString(),
+  }))
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-5xl space-y-8">
@@ -94,6 +90,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
             Created {new Date(org.created_at).toLocaleDateString()}
           </p>
         </div>
+        <SetHomeOrgButton orgId={org.id} orgName={org.name} />
       </div>
 
       {/* Stats */}
@@ -124,39 +121,13 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
         <div className="flex items-center gap-2 border-b border-slate-100 px-6 py-4">
           <Users className="h-4 w-4 text-slate-500" />
           <h2 className="text-sm font-semibold text-slate-900">Users ({profiles?.length ?? 0})</h2>
+          <p className="ml-auto text-xs text-slate-400">
+            <span title="Pencil = edit name/role">✏️</span> edit &nbsp;
+            <span title="Key = send password reset">🔑</span> reset password &nbsp;
+            <span title="Trash = remove user">🗑️</span> remove
+          </p>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-100 bg-slate-50">
-              {['Name', 'Email', 'Role', 'Joined'].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {(profiles ?? []).map((p) => (
-              <tr key={p.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 font-medium text-slate-900">{p.full_name}</td>
-                <td className="px-4 py-3 text-slate-500">{emailMap.get(p.id) ?? '—'}</td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
-                    {roleLabel[p.role] ?? p.role}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-slate-500">
-                  {new Date(p.created_at).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
-            {(profiles ?? []).length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-sm text-slate-400">
-                  No users yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <UserManagementTable users={userRows} orgId={org.id} />
       </div>
 
       {/* Invite user */}

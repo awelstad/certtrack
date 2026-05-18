@@ -106,12 +106,28 @@ export function Sidebar({ profile, jobs, selectedJobId, org, allOrgs, activeOrgI
   const iconClass = (active: boolean) =>
     cn('h-4 w-4 shrink-0', active ? 'text-white' : 'text-slate-500 group-hover:text-white')
 
+  // activeOrgId holds home_org_id: non-null = currently viewing a different (customer) org
+  const isAdminViewing = profile.is_platform_admin && !!activeOrgId
+
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-slate-900 lg:flex">
+      {/* Admin mode banner — shown when platform admin is viewing a customer org */}
+      {isAdminViewing && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-amber-500/30 bg-amber-500/20 px-4 py-2">
+          <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber-400" />
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-300">Admin View</span>
+        </div>
+      )}
+
       {/* Clearwork brand */}
       <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-slate-800 px-4">
         <ClearworkMark size={28} />
         <span className="text-base font-bold text-white tracking-tight">Clearwork</span>
+        {profile.is_platform_admin && !isAdminViewing && (
+          <span className="ml-auto rounded-full bg-orange-500/20 px-2 py-0.5 text-xs font-bold text-orange-400">
+            ADMIN
+          </span>
+        )}
       </div>
 
       {/* Org branding */}
@@ -236,7 +252,7 @@ export function Sidebar({ profile, jobs, selectedJobId, org, allOrgs, activeOrgI
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-white">{profile.full_name}</p>
             <p className="truncate text-xs text-slate-400 capitalize">
-              {profile.role.replace('_', ' ')}
+              {profile.is_platform_admin ? 'Platform Admin' : profile.role.replace('_', ' ')}
             </p>
           </div>
         </div>

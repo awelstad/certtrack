@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { OrgPlanForm } from '@/components/OrgPlanForm'
-import { Plus, Building2, Users, HardHat, ExternalLink } from 'lucide-react'
+import { EnterOrgButton } from './EnterOrgButton'
+import { Plus, Building2, Users, HardHat, ExternalLink, CreditCard, Gift } from 'lucide-react'
 
 export default async function SuperAdminPage() {
   const supabase = await createClient()
@@ -45,6 +46,16 @@ export default async function SuperAdminPage() {
     workerMap.set(w.organization_id, (workerMap.get(w.organization_id) ?? 0) + 1)
   }
 
+  // Plan breakdown
+  const planCounts = (orgs ?? []).reduce((acc, org) => {
+    const plan = org.plan ?? 'free'
+    acc[plan] = (acc[plan] ?? 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
+  const proCount  = (planCounts['pro'] ?? 0) + (planCounts['enterprise'] ?? 0)
+  const freeCount = (planCounts['free'] ?? 0) + (planCounts['trial'] ?? 0)
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-6xl">
       <div className="mb-6 flex items-center justify-between">
@@ -62,7 +73,7 @@ export default async function SuperAdminPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           { label: 'Total Orgs',    value: orgs?.length ?? 0,                                     icon: Building2 },
           { label: 'Total Users',   value: [...profileMap.values()].reduce((a, b) => a + b, 0),   icon: Users },
@@ -80,6 +91,24 @@ export default async function SuperAdminPage() {
             </div>
           </div>
         ))}
+
+        {/* SaaS health widget */}
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Revenue</p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50">
+              <CreditCard className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-700">{proCount}</p>
+              <p className="text-xs text-slate-500">Paying</p>
+            </div>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <Gift className="h-4 w-4 text-slate-400" />
+            <span className="text-sm font-medium text-slate-500">{freeCount} free / trial</span>
+          </div>
+        </div>
       </div>
 
       {/* Org table */}
@@ -106,12 +135,15 @@ export default async function SuperAdminPage() {
                   {new Date(org.created_at).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-3">
-                  <Link
-                    href={`/super-admin/orgs/${org.id}`}
-                    className="inline-flex items-center gap-1 text-xs text-orange-600 hover:underline"
-                  >
-                    <ExternalLink className="h-3 w-3" /> Details
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <EnterOrgButton orgId={org.id} />
+                    <Link
+                      href={`/super-admin/orgs/${org.id}`}
+                      className="inline-flex items-center gap-1 text-xs text-orange-600 hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" /> Details
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
