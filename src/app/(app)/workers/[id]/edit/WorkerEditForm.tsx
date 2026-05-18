@@ -35,7 +35,7 @@ export function WorkerEditForm({ worker }: { worker: Worker }) {
   const [state, action, pending] = useActionState(
     async (prev: { error?: string; success?: boolean } | null, formData: FormData) => {
       const result = await updateWorker(prev, formData)
-      if (result.success) router.push(`/workers/${worker.id}`)
+      if (result.success) router.push(`/workers/${worker.id}?saved=1`)
       return result
     },
     null

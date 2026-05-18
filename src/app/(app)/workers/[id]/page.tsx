@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { StatusBadge } from '@/components/workers/StatusBadge'
 import { QRCodeDisplay } from '@/components/workers/QRCodeDisplay'
 import { calculateWorkerOverallStatus } from '@/lib/certifications'
-import { ArrowLeft, Award, QrCode, Phone, Mail, Smartphone, Monitor, ScanLine, Pencil } from 'lucide-react'
+import { ArrowLeft, Award, QrCode, Phone, Mail, Smartphone, Monitor, ScanLine, Pencil, CheckCircle2 } from 'lucide-react'
 import type { WorkerStatus, CertStatus } from '@/lib/types'
 
 const employmentVariant: Record<WorkerStatus, 'green' | 'slate' | 'red'> = {
@@ -38,8 +38,15 @@ function formatScanTime(ts: string) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export default async function WorkerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function WorkerDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ saved?: string }>
+}) {
   const { id } = await params
+  const { saved } = await searchParams
   const supabase = await createClient()
 
   const { data: worker } = await supabase
@@ -78,6 +85,13 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
           Workers
         </Link>
       </div>
+
+      {saved === '1' && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-5 py-3">
+          <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
+          <p className="text-sm font-medium text-green-800">Worker saved successfully.</p>
+        </div>
+      )}
 
       {/* Profile header */}
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
