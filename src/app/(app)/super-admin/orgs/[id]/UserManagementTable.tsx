@@ -23,7 +23,10 @@ const roleOptions = [
   { value: 'gc_read_only',        label: 'GC Read-Only' },
 ]
 
-const roleLabel: Record<string, string> = Object.fromEntries(roleOptions.map((r) => [r.value, r.label]))
+const roleLabel: Record<string, string> = {
+  ...Object.fromEntries(roleOptions.map((r) => [r.value, r.label])),
+  platform_admin: 'Platform Admin',
+}
 
 export function UserManagementTable({ users, orgId }: { users: UserRow[]; orgId: string }) {
   const router = useRouter()

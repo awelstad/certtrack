@@ -58,7 +58,7 @@ const settingsItems: NavItem[] = [
 
 const settingsRoots = settingsItems.map(i => i.href)
 
-const adminRoles: Role[] = ['owner', 'admin']
+const adminRoles: Role[] = ['platform_admin', 'owner', 'admin']
 
 const subNavItems: NavItem[] = [
   { href: '/sub-portal', label: 'My Workers', icon: HardHat },

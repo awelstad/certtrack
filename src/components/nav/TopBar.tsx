@@ -19,7 +19,7 @@ type Props = {
   org: { name: string; logo_url: string | null }
 }
 
-const adminRoles: Role[] = ['owner', 'admin']
+const adminRoles: Role[] = ['platform_admin', 'owner', 'admin']
 
 export function TopBar({ profile, jobs, selectedJobId, org }: Props) {
   const [open, setOpen] = useState(false)

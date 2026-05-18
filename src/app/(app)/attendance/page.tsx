@@ -63,7 +63,7 @@ export default async function AttendanceOverviewPage({
 
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
-  const canOrderKit = profile?.role === 'owner' || profile?.role === 'admin'
+  const canOrderKit = profile?.role === 'platform_admin' || profile?.role === 'owner' || profile?.role === 'admin'
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">

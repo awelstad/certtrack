@@ -1,4 +1,5 @@
 export type Role =
+  | 'platform_admin'
   | 'owner'
   | 'admin'
   | 'pm'
