@@ -73,7 +73,7 @@ export default async function SuperAdminPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-3 gap-4">
         {[
           { label: 'Total Orgs',    value: orgs?.length ?? 0,                                     icon: Building2 },
           { label: 'Total Users',   value: [...profileMap.values()].reduce((a, b) => a + b, 0),   icon: Users },
@@ -91,23 +91,23 @@ export default async function SuperAdminPage() {
             </div>
           </div>
         ))}
+      </div>
 
-        {/* SaaS health widget */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Revenue</p>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50">
-              <CreditCard className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-700">{proCount}</p>
-              <p className="text-xs text-slate-500">Paying</p>
-            </div>
-          </div>
-          <div className="mt-2 flex items-center gap-2">
-            <Gift className="h-4 w-4 text-slate-400" />
-            <span className="text-sm font-medium text-slate-500">{freeCount} free / trial</span>
-          </div>
+      {/* SaaS health widget */}
+      <div className="mb-6 flex items-center gap-6 rounded-xl border border-green-200 bg-green-50 px-6 py-4 shadow-sm">
+        <CreditCard className="h-6 w-6 shrink-0 text-green-600" />
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-green-700">Paying Customers</p>
+          <p className="text-3xl font-bold text-green-800">{proCount}</p>
+        </div>
+        <div className="h-10 w-px bg-green-200" />
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Free / Trial</p>
+          <p className="text-3xl font-bold text-slate-600">{freeCount}</p>
+        </div>
+        <div className="ml-auto text-right">
+          <p className="text-xs text-slate-400">Total organizations</p>
+          <p className="text-2xl font-bold text-slate-700">{orgs?.length ?? 0}</p>
         </div>
       </div>
 
