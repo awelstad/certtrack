@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Badge } from '@/components/ui/Badge'
+import { SeedCertTypesButton } from './SeedCertTypesButton'
 import { Award, Plus, AlertTriangle, Clock, CalendarDays } from 'lucide-react'
 
 export default async function CertificationTypesPage() {
@@ -88,10 +89,13 @@ function renderPage({ types, pendingCount, expiringCount, selectedJobName }: {
         title="Certifications"
         description={selectedJobName ? `Showing cert stats for workers on ${selectedJobName}.` : 'Define certification types and monitor compliance across your workforce.'}
         action={
-          <button className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600">
+          <Link
+            href="/certifications/new"
+            className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
+          >
             <Plus className="h-4 w-4" />
             New Type
-          </button>
+          </Link>
         }
       />
 
@@ -144,12 +148,15 @@ function renderPage({ types, pendingCount, expiringCount, selectedJobName }: {
       </div>
 
       {/* Cert types list */}
-      <h2 className="mb-3 text-sm font-semibold text-slate-700">Certification Types</h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-700">Certification Types</h2>
+        <SeedCertTypesButton />
+      </div>
       {!types.length ? (
         <EmptyState
           icon={Award}
           title="No certification types"
-          description="Create certification types like OSHA 10, First Aid, or Forklift — then require them per job."
+          description="Click 'Add Standard Types' to load common certifications, or use '+ New Type' to create a custom one."
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

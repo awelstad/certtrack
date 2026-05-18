@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
-const MANAGER_ROLES = ['owner', 'admin', 'pm', 'superintendent'] as const
+const MANAGER_ROLES = ['platform_admin', 'owner', 'admin', 'pm', 'superintendent'] as const
 
 async function getAuthedManager() {
   const supabase = await createClient()
@@ -57,6 +57,38 @@ export async function createJob(
   if (dbErr) return { error: dbErr.message }
   revalidatePath('/jobs')
   return { jobId: job.id }
+}
+
+export async function updateJob(
+  _prev: { error?: string; success?: boolean } | null,
+  formData: FormData
+): Promise<{ error?: string; success?: boolean }> {
+  const { supabase, profile, error } = await getAuthedManager()
+  if (error || !profile) return { error: error ?? 'Unauthorized' }
+
+  const jobId     = (formData.get('job_id') as string)?.trim()
+  const name      = (formData.get('name') as string)?.trim()
+  const address   = (formData.get('address') as string)?.trim() || null
+  const city      = (formData.get('city') as string)?.trim() || null
+  const state     = (formData.get('state') as string)?.trim() || null
+  const zip       = (formData.get('zip') as string)?.trim() || null
+  const status    = (formData.get('status') as string) || 'active'
+  const startDate = (formData.get('startDate') as string) || null
+  const endDate   = (formData.get('endDate') as string) || null
+
+  if (!jobId) return { error: 'Job ID missing' }
+  if (!name)  return { error: 'Job name is required' }
+
+  const { error: dbErr } = await supabase
+    .from('jobs')
+    .update({ name, address, city, state, zip, status, start_date: startDate, end_date: endDate })
+    .eq('id', jobId)
+    .eq('organization_id', profile.organization_id)
+
+  if (dbErr) return { error: dbErr.message }
+  revalidatePath(`/jobs/${jobId}`)
+  revalidatePath('/jobs')
+  return { success: true }
 }
 
 export async function updateJobStatus(

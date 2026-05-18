@@ -2,8 +2,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/Badge'
-import { ArrowLeft, Award, ShieldCheck, MapPin, QrCode, HardHat, ScanLine } from 'lucide-react'
-import type { JobStatus } from '@/lib/types'
+import { ArrowLeft, Award, ShieldCheck, MapPin, QrCode, HardHat, ScanLine, Pencil, CheckCircle2 } from 'lucide-react'
+import type { JobStatus, Role } from '@/lib/types'
+
+const EDIT_ROLES: Role[] = ['platform_admin', 'owner', 'admin', 'pm', 'superintendent']
 
 const statusVariant: Record<JobStatus, 'green' | 'slate' | 'red' | 'yellow'> = {
   active: 'green',
@@ -12,12 +14,20 @@ const statusVariant: Record<JobStatus, 'green' | 'slate' | 'red' | 'yellow'> = {
   cancelled: 'red',
 }
 
-export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function JobDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ saved?: string }>
+}) {
   const { id } = await params
+  const { saved } = await searchParams
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user!.id).single()
+  const { data: profile } = await supabase.from('profiles').select('organization_id, role').eq('id', user!.id).single()
+  const canEdit = EDIT_ROLES.includes(profile?.role as Role)
 
   const { data: job } = await supabase
     .from('jobs')
@@ -38,6 +48,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </Link>
       </div>
 
+      {saved === '1' && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Job saved successfully.
+        </div>
+      )}
+
       {/* Job header */}
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4">
@@ -50,7 +67,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               </p>
             )}
           </div>
-          <Badge label={job.status.replace('_', ' ')} variant={statusVariant[job.status as JobStatus]} />
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <Link
+                href={`/jobs/${id}/edit`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </Link>
+            )}
+            <Badge label={job.status.replace('_', ' ')} variant={statusVariant[job.status as JobStatus]} />
+          </div>
         </div>
         {(job.start_date || job.end_date) && (
           <p className="mt-3 text-sm text-slate-500">
