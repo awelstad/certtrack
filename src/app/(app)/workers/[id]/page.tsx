@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { StatusBadge } from '@/components/workers/StatusBadge'
 import { QRCodeDisplay } from '@/components/workers/QRCodeDisplay'
 import { calculateWorkerOverallStatus } from '@/lib/certifications'
-import { ArrowLeft, Award, QrCode, Phone, Mail, Smartphone, Monitor, ScanLine } from 'lucide-react'
+import { ArrowLeft, Award, QrCode, Phone, Mail, Smartphone, Monitor, ScanLine, Pencil } from 'lucide-react'
 import type { WorkerStatus, CertStatus } from '@/lib/types'
 
 const employmentVariant: Record<WorkerStatus, 'green' | 'slate' | 'red'> = {
@@ -123,14 +123,23 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
             </div>
           </div>
 
-          <Link
-            href={`/badge/${worker.public_id}`}
-            target="_blank"
-            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-          >
-            <QrCode className="h-4 w-4" />
-            Print Badge
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href={`/workers/${id}/edit`}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Link>
+            <Link
+              href={`/badge/${worker.public_id}`}
+              target="_blank"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              <QrCode className="h-4 w-4" />
+              Print Badge
+            </Link>
+          </div>
         </div>
       </div>
 
