@@ -5,6 +5,7 @@ export type Role =
   | 'pm'
   | 'superintendent'
   | 'worker'
+  | 'kiosk'
   | 'subcontractor_admin'
   | 'gc_read_only'
 

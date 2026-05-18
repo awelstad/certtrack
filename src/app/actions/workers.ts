@@ -2,9 +2,51 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createAuditLog } from '@/lib/audit'
 import { getPlan, PLAN_LIMITS } from '@/lib/plans'
+import { headers } from 'next/headers'
 import type { Role } from '@/lib/types'
+
+async function getBaseUrl(): Promise<string> {
+  const hdrs = await headers()
+  const host = hdrs.get('host') ?? 'localhost:3000'
+  const proto = hdrs.get('x-forwarded-proto') ?? (host.includes('localhost') ? 'http' : 'https')
+  return `${proto}://${host}`
+}
+
+async function sendPortalInviteEmail(workerEmail: string, workerName: string): Promise<void> {
+  if (!process.env.RESEND_API_KEY) return
+  const baseUrl = await getBaseUrl()
+  const portalUrl = `${baseUrl}/worker`
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Clearwork <onboarding@resend.dev>',
+      to: workerEmail,
+      subject: 'Your Clearwork Worker Portal Invitation',
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+          <h1 style="color:#0f172a;font-size:22px;margin:0 0 8px">You've been added to Clearwork</h1>
+          <p style="color:#374151;font-size:14px">Hi ${workerName},</p>
+          <p style="color:#374151;font-size:14px">Your employer has added you to Clearwork. You can now access the worker portal to view your certifications, upload new ones, and track your orientation history.</p>
+          <div style="text-align:center;margin:28px 0">
+            <a href="${portalUrl}"
+               style="display:inline-block;background:#0f172a;color:white;font-weight:700;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px">
+              Access Worker Portal →
+            </a>
+          </div>
+          <p style="color:#6b7280;font-size:13px">You'll log in with this email address (${workerEmail}) using a magic link — no password required.</p>
+          <p style="color:#94a3b8;font-size:12px;text-align:center">Powered by Clearwork</p>
+        </div>
+      `,
+    }),
+  }).catch(() => {})
+}
 
 const MANAGER_ROLES: Role[] = ['platform_admin', 'owner', 'admin', 'pm', 'superintendent']
 const EDIT_ROLES:    Role[] = ['platform_admin', 'owner', 'admin', 'pm', 'superintendent']
@@ -46,17 +88,21 @@ export async function createWorker(
     }
   }
 
+  const email       = (formData.get('email') as string)?.trim() || null
+  const sendInvite  = formData.get('send_portal_invite') === 'on' && Boolean(email)
+
   const { data, error } = await supabase
     .from('workers')
     .insert({
-      organization_id: profile.organization_id,
-      first_name:      firstName,
-      last_name:       lastName,
-      email:           (formData.get('email') as string)?.trim() || null,
-      phone:           (formData.get('phone') as string)?.trim() || null,
-      trade:           (formData.get('trade') as string)?.trim() || null,
-      employer:        (formData.get('employer') as string)?.trim() || null,
-      status:          'active' as const,
+      organization_id:        profile.organization_id,
+      first_name:             firstName,
+      last_name:              lastName,
+      email,
+      phone:                  (formData.get('phone') as string)?.trim() || null,
+      trade:                  (formData.get('trade') as string)?.trim() || null,
+      employer:               (formData.get('employer') as string)?.trim() || null,
+      status:                 'active' as const,
+      portal_invite_sent_at:  sendInvite ? new Date().toISOString() : null,
     })
     .select('id')
     .single()
@@ -72,6 +118,13 @@ export async function createWorker(
     entityId: data.id,
     metadata: { name: `${firstName} ${lastName}` },
   })
+
+  if (sendInvite && email) {
+    // Pre-create the auth account so the magic link flow works
+    const admin = createAdminClient()
+    await admin.auth.admin.createUser({ email, email_confirm: true }).catch(() => {})
+    await sendPortalInviteEmail(email, `${firstName} ${lastName}`)
+  }
 
   revalidatePath('/workers')
   return { workerId: data.id }

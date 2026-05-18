@@ -131,13 +131,25 @@ export async function completeWorkerProfile(data: {
 
   const admin = createAdminClient()
 
-  // If profile already exists, return existing worker number
+  // If profile already exists, return existing worker number and link workers record if not yet linked
   const { data: existing } = await admin
     .from('profiles')
     .select('worker_number, full_name')
     .eq('id', user.id)
     .single()
-  if (existing) return { workerNumber: existing.worker_number ?? undefined, fullName: existing.full_name ?? undefined }
+  if (existing) {
+    // Attempt to link workers record by email (fire and forget)
+    if (user.email) {
+      admin
+        .from('workers')
+        .update({ auth_user_id: user.id })
+        .eq('email', user.email)
+        .eq('organization_id', data.orgId)
+        .is('auth_user_id', null)
+        .then(() => {})
+    }
+    return { workerNumber: existing.worker_number ?? undefined, fullName: existing.full_name ?? undefined }
+  }
 
   const meta = user.user_metadata ?? {}
   const fullName = (meta.full_name as string | undefined)?.trim() || user.email?.split('@')[0] || 'Worker'
@@ -154,6 +166,16 @@ export async function completeWorkerProfile(data: {
     worker_number: workerNumber,
   })
   if (error) return { error: error.message }
+
+  // Link to existing workers record by email if one exists
+  if (user.email) {
+    await admin
+      .from('workers')
+      .update({ auth_user_id: user.id })
+      .eq('email', user.email)
+      .eq('organization_id', data.orgId)
+      .is('auth_user_id', null)
+  }
 
   return { workerNumber, fullName }
 }
@@ -297,10 +319,19 @@ export async function completeOrientationWithPass(data: {
               <p style="color:#9a3412;font-size:12px;margin:10px 0 0">Show this to your site safety manager to receive your sticker</p>
             </div>
 
-            <div style="text-align:center;margin-bottom:20px">
+            <div style="text-align:center;margin-bottom:16px">
               <a href="${verifyUrl}"
                  style="display:inline-block;background:#f97316;color:white;font-weight:600;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:14px">
                 View &amp; Verify My Pass →
+              </a>
+            </div>
+
+            <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;text-align:center;margin-bottom:16px">
+              <p style="color:#374151;font-size:13px;font-weight:600;margin:0 0 6px">Worker Portal</p>
+              <p style="color:#6b7280;font-size:12px;margin:0 0 12px">View your certifications, upload new ones, and track your orientation history.</p>
+              <a href="${baseUrl}/worker"
+                 style="display:inline-block;background:#0f172a;color:white;font-weight:600;padding:10px 22px;border-radius:8px;text-decoration:none;font-size:13px">
+                Access Your Worker Portal →
               </a>
             </div>
 

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Briefcase, ScanLine, ArrowLeft } from 'lucide-react'
 
@@ -7,11 +8,19 @@ export const dynamic = 'force-dynamic'
 export default async function KioskJobSelectPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/kiosk/login')
+
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organization_id')
-    .eq('id', user!.id)
+    .select('organization_id, role, kiosk_job_id')
+    .eq('id', user.id)
     .single()
+
+  // Kiosk accounts go directly to their assigned job
+  if (profile?.role === 'kiosk' && profile.kiosk_job_id) {
+    redirect(`/kiosk/${profile.kiosk_job_id}`)
+  }
+  if (profile?.role === 'kiosk') redirect('/kiosk/login')
 
   const { data: org } = await supabase
     .from('organizations')

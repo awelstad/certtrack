@@ -144,7 +144,7 @@ export default async function JobDetailPage({
         </Link>
 
         <Link
-          href={`/kiosk/${id}`}
+          href={`/jobs/${id}/kiosk`}
           className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:bg-slate-50"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900">
@@ -152,7 +152,7 @@ export default async function JobDetailPage({
           </div>
           <div>
             <p className="font-semibold text-slate-900">Site Kiosk</p>
-            <p className="text-sm text-slate-500">Launch scanner check-in screen</p>
+            <p className="text-sm text-slate-500">Set up tablet check-in accounts</p>
           </div>
         </Link>
       </div>

@@ -1,19 +1,24 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { logAttendance } from '@/app/actions/attendance'
-import { ScanLine, CheckCircle2, LogOut, Users, ShieldCheck, ShieldAlert, ShieldX, Clock } from 'lucide-react'
+import { ScanLine, CheckCircle2, LogOut, Users, ShieldCheck, ShieldAlert, ShieldX, Clock, ClipboardCheck } from 'lucide-react'
 
 type ScanState = 'idle' | 'processing' | 'checkin' | 'checkout' | 'error'
 type Compliance = 'green' | 'yellow' | 'red' | 'gray'
 
 interface RecentScan {
   id: number
+  workerId: string
   name: string
   event: 'check_in' | 'check_out'
   time: Date
   photo: string | null
   trade: string | null
+  orientationOk: boolean
+  jhaOk: boolean
+  compliance: Compliance
 }
 
 interface Props {
@@ -24,11 +29,15 @@ interface Props {
   brandColor: string
   initialOnSiteCount: number
   initialRecentScans: {
+    workerId: string
     name: string
     event: 'check_in' | 'check_out'
     time: string
     photo: string | null
     trade: string | null
+    orientationOk: boolean
+    jhaOk: boolean
+    compliance: Compliance
   }[]
 }
 
@@ -42,9 +51,9 @@ const BG: Record<ScanState, string> = {
 
 function ComplianceBadge({ status }: { status: Compliance }) {
   const cfg = {
-    green:  { Icon: ShieldCheck,  label: 'Cleared',         cls: 'bg-white/20 text-white' },
-    yellow: { Icon: ShieldAlert,  label: 'Expiring Soon',   cls: 'bg-yellow-400/30 text-yellow-100' },
-    red:    { Icon: ShieldX,      label: 'Not Cleared',     cls: 'bg-red-400/30 text-red-100' },
+    green:  { Icon: ShieldCheck,  label: 'Cleared',          cls: 'bg-white/20 text-white' },
+    yellow: { Icon: ShieldAlert,  label: 'Expiring Soon',    cls: 'bg-yellow-400/30 text-yellow-100' },
+    red:    { Icon: ShieldX,      label: 'Not Cleared',      cls: 'bg-red-400/30 text-red-100' },
     gray:   { Icon: Clock,        label: 'No Certs on File', cls: 'bg-white/10 text-white/60' },
   }[status]
 
@@ -52,6 +61,28 @@ function ComplianceBadge({ status }: { status: Compliance }) {
     <div className={`mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold ${cfg.cls}`}>
       <cfg.Icon className="h-4 w-4" />
       {cfg.label}
+    </div>
+  )
+}
+
+function StatusDots({ orientationOk, jhaOk, compliance }: { orientationOk: boolean; jhaOk: boolean; compliance: Compliance }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span title={orientationOk ? 'Orientation passed' : 'No orientation'}>
+        {orientationOk
+          ? <ShieldCheck className="h-3.5 w-3.5 text-green-400" />
+          : <ShieldX className="h-3.5 w-3.5 text-red-400" />
+        }
+      </span>
+      <span title={jhaOk ? 'JHA signed today' : 'No JHA today'}>
+        <ClipboardCheck className={`h-3.5 w-3.5 ${jhaOk ? 'text-green-400' : 'text-slate-600'}`} />
+      </span>
+      <span title={`Cert status: ${compliance}`}>
+        {compliance === 'green'  && <ShieldCheck className="h-3.5 w-3.5 text-green-400" />}
+        {compliance === 'yellow' && <ShieldAlert className="h-3.5 w-3.5 text-yellow-400" />}
+        {compliance === 'red'   && <ShieldX className="h-3.5 w-3.5 text-red-400" />}
+        {compliance === 'gray'  && <Clock className="h-3.5 w-3.5 text-slate-600" />}
+      </span>
     </div>
   )
 }
@@ -64,9 +95,10 @@ export function KioskScanner({
   initialOnSiteCount,
   initialRecentScans,
 }: Props) {
-  const inputRef      = useRef<HTMLInputElement>(null)
+  const router      = useRouter()
+  const inputRef    = useRef<HTMLInputElement>(null)
   const processingRef = useRef(false)
-  const scanIdRef     = useRef(0)
+  const scanIdRef   = useRef(0)
 
   const [scanState,   setScanState]   = useState<ScanState>('idle')
   const [lastWorker,  setLastWorker]  = useState<{ name: string; photo: string | null; trade: string | null } | null>(null)
@@ -80,10 +112,23 @@ export function KioskScanner({
   )
   const [now, setNow] = useState(new Date())
 
+  // Clock tick
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
+
+  // Auto-refresh server data every 60 seconds (re-runs server component)
+  useEffect(() => {
+    const t = setInterval(() => router.refresh(), 60_000)
+    return () => clearInterval(t)
+  }, [router])
+
+  // Sync props after refresh
+  useEffect(() => {
+    setOnSiteCount(initialOnSiteCount)
+    setRecentScans(initialRecentScans.map((s, i) => ({ ...s, id: i, time: new Date(s.time) })))
+  }, [initialOnSiteCount, initialRecentScans])
 
   const refocus = useCallback(() => inputRef.current?.focus(), [])
   useEffect(() => {
@@ -136,12 +181,16 @@ export function KioskScanner({
       result.event === 'check_in' ? prev + 1 : Math.max(0, prev - 1)
     )
     setRecentScans((prev) => [{
-      id:    ++scanIdRef.current,
-      name:  result.worker!.name,
-      event: result.event!,
-      time:  ts,
-      photo: result.worker!.photo,
-      trade: result.worker!.trade,
+      id:            ++scanIdRef.current,
+      workerId:      '',
+      name:          result.worker!.name,
+      event:         result.event!,
+      time:          ts,
+      photo:         result.worker!.photo,
+      trade:         result.worker!.trade,
+      orientationOk: false,
+      jhaOk:         false,
+      compliance:    result.compliance ?? 'gray',
     }, ...prev].slice(0, 8))
   }
 
@@ -186,12 +235,17 @@ export function KioskScanner({
             </div>
             <p className="text-4xl font-bold text-white">Scan your QR code</p>
             <p className="mt-3 text-lg text-white/50">Hold your helmet badge up to the scanner</p>
-            <div className="mt-8 flex items-center gap-2.5 rounded-full bg-white/10 px-6 py-3">
+
+            {/* On-site count — tappable link to workers panel */}
+            <a
+              href={`/kiosk/${jobId}/workers`}
+              className="mt-8 flex items-center gap-2.5 rounded-full bg-white/10 px-6 py-3 hover:bg-white/20 transition-colors"
+            >
               <Users className="h-5 w-5 text-white/60" />
               <span className="text-lg font-semibold text-white">
                 {onSiteCount} worker{onSiteCount !== 1 ? 's' : ''} on site today
               </span>
-            </div>
+            </a>
           </div>
         )}
 
@@ -206,7 +260,6 @@ export function KioskScanner({
         {/* CHECK IN */}
         {scanState === 'checkin' && lastWorker && (
           <div className="flex flex-col items-center text-center">
-            {/* Big clear label at top */}
             <div className="mb-6 flex items-center gap-3 rounded-2xl bg-white/20 px-8 py-4">
               <CheckCircle2 className="h-8 w-8 text-white" />
               <span className="text-4xl font-black tracking-wide text-white">CHECKED IN</span>
@@ -243,7 +296,6 @@ export function KioskScanner({
         {/* CHECK OUT */}
         {scanState === 'checkout' && lastWorker && (
           <div className="flex flex-col items-center text-center">
-            {/* Big clear label at top */}
             <div className="mb-6 flex items-center gap-3 rounded-2xl bg-white/20 px-8 py-4">
               <LogOut className="h-8 w-8 text-white" />
               <span className="text-4xl font-black tracking-wide text-white">CHECKED OUT</span>
@@ -311,7 +363,8 @@ export function KioskScanner({
                   </div>
                 )}
                 <span className="flex-1 truncate text-sm font-medium text-white/60">{s.name}</span>
-                <span className={`shrink-0 text-xs font-bold ${s.event === 'check_in' ? 'text-green-400' : 'text-amber-400'}`}>
+                <StatusDots orientationOk={s.orientationOk} jhaOk={s.jhaOk} compliance={s.compliance} />
+                <span className={`shrink-0 text-xs font-bold ml-1.5 ${s.event === 'check_in' ? 'text-green-400' : 'text-amber-400'}`}>
                   {s.event === 'check_in' ? 'IN' : 'OUT'}
                 </span>
                 <span className="w-16 shrink-0 text-right font-mono text-xs text-white/30">
