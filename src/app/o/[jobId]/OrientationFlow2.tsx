@@ -50,6 +50,8 @@ type Props = {
   userMeta: { full_name?: string; phone?: string }
   orgId: string
   orgName: string
+  logoUrl: string | null
+  brandColor: string
   jobName: string
   jobLocation: string | null
   subNames: string[]
@@ -76,6 +78,8 @@ export function OrientationFlow2({
   userMeta,
   orgId,
   orgName,
+  logoUrl,
+  brandColor,
   jobName,
   jobLocation,
   subNames,
@@ -105,7 +109,7 @@ export function OrientationFlow2({
   )
   const [score, setScore] = useState<number | null>(null)
   const [passed, setPassed] = useState<boolean | null>(null)
-  const [passId, setPassId] = useState<string | null>(existingPass?.pass_id ?? null)
+  const [passId, setPassId] = useState<string | null>(existingPass?.passId ?? null)
   const [finalEmployer, setFinalEmployer] = useState(existingPass?.employer ?? '')
   const [completedAt, setCompletedAt] = useState(existingPass?.completedAt ?? '')
   const [completedScore, setCompletedScore] = useState(existingPass?.score ?? 0)

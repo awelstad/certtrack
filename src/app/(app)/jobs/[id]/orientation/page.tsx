@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { ArrowLeft, QrCode, Users, Pencil } from 'lucide-react'
+import { ArrowLeft, QrCode, Users, Pencil, Printer } from 'lucide-react'
 
 export default async function OrientationPage({
   params,
@@ -105,11 +105,13 @@ export default async function OrientationPage({
             </div>
 
             <a
-              href={qrUrl}
-              download={`orientation-qr-${id}.png`}
-              className="block w-full rounded-lg border border-slate-200 py-2 text-center text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              href={`/o/${id}/print`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full rounded-lg border border-slate-200 py-2 text-center text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
             >
-              Download QR Code
+              <Printer className="h-4 w-4" />
+              Print QR Poster
             </a>
           </div>
 

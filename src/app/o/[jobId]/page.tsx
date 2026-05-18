@@ -31,7 +31,7 @@ export default async function PublicOrientationPage({
     { data: reqCerts },
   ] = await Promise.all([
     admin.from('jobs').select('name, city, state').eq('id', jobId).single(),
-    admin.from('organizations').select('name').eq('id', orientation.organization_id).single(),
+    admin.from('organizations').select('name, logo_url, brand_color').eq('id', orientation.organization_id).single(),
     admin
       .from('subcontractor_invites')
       .select('company_name')
@@ -47,10 +47,12 @@ export default async function PublicOrientationPage({
   const jobName = job?.name ?? 'Site Orientation'
   const jobLocation = [job?.city, job?.state].filter(Boolean).join(', ') || null
   const orgName = org?.name ?? 'Your Company'
+  const logoUrl = org?.logo_url ?? null
+  const brandColor = org?.brand_color ?? '#f97316'
   const subNames = (subs ?? []).map((s) => s.company_name)
 
   type CertRow = { certification_types: { name: string } | null }
-  const certNames = (reqCerts as CertRow[] ?? [])
+  const certNames = ((reqCerts as unknown as CertRow[]) ?? [])
     .map((r) => r.certification_types?.name)
     .filter((n): n is string => Boolean(n))
 
@@ -64,6 +66,9 @@ export default async function PublicOrientationPage({
         jobId={jobId}
         jobName={jobName}
         orgName={orgName}
+        logoUrl={logoUrl}
+        brandColor={brandColor}
+        jobLocation={jobLocation}
       />
     )
   }
@@ -104,6 +109,8 @@ export default async function PublicOrientationPage({
       }}
       orgId={orientation.organization_id}
       orgName={orgName}
+      logoUrl={logoUrl}
+      brandColor={brandColor}
       jobName={jobName}
       jobLocation={jobLocation}
       subNames={subNames}

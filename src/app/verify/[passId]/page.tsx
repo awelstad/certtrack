@@ -51,7 +51,7 @@ export default async function VerifyPassPage({
     workerNumber = profileRes.data?.worker_number ?? null
 
     type CertRow = { certification_types: { name: string } | null }
-    certWarnings = (reqCertRes.data as CertRow[] ?? [])
+    certWarnings = ((reqCertRes.data as unknown as CertRow[]) ?? [])
       .map((r) => r.certification_types?.name)
       .filter((n): n is string => Boolean(n))
   }
