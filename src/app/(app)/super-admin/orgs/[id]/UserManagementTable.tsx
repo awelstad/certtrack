@@ -14,6 +14,7 @@ type UserRow = {
 }
 
 const roleOptions = [
+  { value: 'platform_admin',      label: 'Platform Admin' },
   { value: 'owner',               label: 'Owner' },
   { value: 'admin',               label: 'Admin' },
   { value: 'pm',                  label: 'Project Manager' },
